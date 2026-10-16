@@ -80,6 +80,17 @@ confirmed +0.05, rejected never). Two clearly marked EXAMPLE draft cards ship in
 | JSON repair | 2 retries per LLM call (do not consume steps) | `JsonRepairFailed` -> fallback report |
 Identical repeated actions are not re-executed ("DUPLICATE"). Rejected actions cost a step but no query budget.
 
+## Preflight and early-stop guard
+* `preflight.py` (runs in `pipeline.analyze` before the LLM): for up to 3 work-order-like numbers of the incident entities the
+  `wo_locate` template (param `Number`) runs through the Executor (live: executed; dry-run: rendered, `executed=false`). The
+  ticket country is the reporter's country, so the real TenantId comes from here. Result goes into the case file as
+  "RESOLVED WORK ORDERS" and the queries are recorded in queries.json and count in the query budget. 0 rows in the selected
+  region and the other region configured (`HIBOT_DB_EU`/`HIBOT_DB_APAC`) -> the other region is tried; found only there ->
+  the run's region switches. `run.json`/report.json gets a `preflight` block.
+* Early-stop guard (`Investigation._premature`): a `final_report` with classification `unknown` or confidence < 0.4 while
+  fewer than half of `max_queries` were used and steps remain is refused ONCE per run; the LLM gets an observation with
+  concrete suggestions (queries that returned 0 rows -> other identifier/region/template). It costs one step.
+
 ## Safety rules
 * DB only through `hibot.db` (templates preferred; ad-hoc SQL via `safe_sql.validate`, PII columns refused, `TOP` injected). The agent has
   no other DB code path. Rows are masked before they reach the model, the report or `runs/`.

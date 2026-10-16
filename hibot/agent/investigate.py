@@ -24,7 +24,7 @@ NO_QUERY_CONF_CAP = 0.6
 class Investigation:
     def __init__(self, llm: LLMClient, incident: dict, matches: List[dict], code_ctx: List[dict], executor: Executor,
                  *, budget: Optional[config.Budget] = None, system_prompt: Optional[str] = None,
-                 on_step: Optional[Callable[[dict], None]] = None):
+                 on_step: Optional[Callable[[dict], None]] = None, resolved_text: str = ""):
         self.llm, self.inc, self.matches, self.executor = llm, incident, matches, executor
         self.budget = budget or executor.budget
         self.system = system_prompt or prompts.system_prompt()
@@ -33,9 +33,10 @@ class Investigation:
         self.llm_calls = 0
         self.forced = False
         self.warnings: List[str] = []
+        self.early_stop_used = False
         catalog = executor.registry.catalog_text(executor.region)
         self.case_prompt = build_case_prompt(incident, matches, code_ctx, catalog, mode=executor.mode,
-                                             region=executor.region, budget=self.budget)
+                                             region=executor.region, budget=self.budget, resolved=resolved_text)
 
     # ------------------------------------------------------------ prompts
     def _messages(self, tail: Optional[str] = None) -> List[Dict[str, str]]:
@@ -84,6 +85,10 @@ class Investigation:
         try:
             for n in range(1, self.budget.max_steps + 1):
                 act = self._ask()
+                if act["action"] == "final_report" and self._premature(act, n):
+                    self.early_stop_used = True                    # once per run
+                    self._log_step(n, act, self._early_stop_text(), False)
+                    continue
                 if act["action"] == "final_report":
                     report = actions.split_report(act)
                     self._log_step(n, act, "(final report)", True)
@@ -105,6 +110,30 @@ class Investigation:
             report = self._fallback("Model geçerli bir JSON yanıtı üretemedi: %s" % str(e)[:200])
         return {"report": self._ground(report), "steps": self.steps, "queries": self.executor.queries,
                 "llm_calls": self.llm_calls, "forced_final": self.forced, "warnings": self.warnings}
+
+    # ------------------------------------------------------- early-stop guard
+    def _premature(self, act: dict, n: int) -> bool:
+        """Weak conclusion (unknown / confidence < 0.4) with at least half of the query budget unused and steps left."""
+        if self.early_stop_used or n >= self.budget.max_steps:
+            return False
+        if self.executor.query_count * 2 >= self.budget.max_queries:
+            return False
+        try:
+            conf = float(act.get("confidence", 0))
+        except (TypeError, ValueError):
+            conf = 0.0
+        return act.get("classification") == "unknown" or conf < 0.4
+
+    def _early_stop_text(self) -> str:
+        zero = [q for q in self.executor.queries if q.get("executed") and q.get("row_count") == 0]
+        tips = ["%s returned 0 rows (params %s): try another identifier (wo_locate, ExternalId), the other region, or a related template"
+                % (q["query_id"], json.dumps(q.get("params") or {}, ensure_ascii=False)) for q in zero]
+        if not tips:
+            tips.append("run the templates named in the 'next:' lines of the queries already run (e.g. wo_header, wo_status_timeline, "
+                        "wo_field_changes, wo_erp_sap, sap_rfc_rest_calls, outbound_queue_backlog) or inspect_code on the symptom")
+        return ("EARLY STOP REFUSED (once): you used %d/%d queries and still have steps, but your final_report is 'unknown' or "
+                "has confidence < 0.4. A 0-row result is a finding, not a reason to stop. You still have budget; before concluding try: %s. "
+                "Send final_report later only if these are exhausted." % (self.executor.query_count, self.budget.max_queries, "; ".join(tips)))
 
     def _log_step(self, n: int, act: dict, obs_text: str, ok: bool, record: Optional[dict] = None) -> None:
         step = {"n": n, "action": act, "action_text": json.dumps(act, ensure_ascii=False), "observation": obs_text,

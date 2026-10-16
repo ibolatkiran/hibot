@@ -9,7 +9,7 @@ from hibot.db.templates import TemplateRegistry
 from hibot.llm.client import LLMClient
 
 from . import cards as cardmod
-from . import config, intake, store
+from . import config, intake, preflight, store
 from .code_context import CodeContext
 from .executor import DRY, Executor
 from .investigate import Investigation
@@ -31,10 +31,12 @@ def analyze(key: Optional[str] = None, text: Optional[str] = None, *, llm: LLMSo
     code = code or CodeContext()
     ctx = code.auto_context(inc)
     registry = registry or TemplateRegistry.load()
-    client = llm(inc, matches, region) if callable(llm) and not isinstance(llm, LLMClient) else llm
     ex = Executor(registry=registry, code=code, mode=mode, region=region, budget=budget, runner_factory=runner_factory)
     try:
-        out = Investigation(client, inc, matches, ctx, ex, budget=budget, on_step=on_step).run()
+        pf = preflight.run(inc, ex)                      # may switch ex.region if the WO lives only in the other region
+        region = ex.region
+        client = llm(inc, matches, region) if callable(llm) and not isinstance(llm, LLMClient) else llm
+        out = Investigation(client, inc, matches, ctx, ex, budget=budget, on_step=on_step, resolved_text=pf["text"]).run()
     finally:
         ex.close()
     run_id = store.new_run_id(inc.get("key"))
@@ -43,7 +45,8 @@ def analyze(key: Optional[str] = None, text: Optional[str] = None, *, llm: LLMSo
         "mode": mode, "region": region, "llm": ("fake-demo" if demo else getattr(client, "name", "llm")), "demo": demo,
         "budget": vars(budget), "input": {"key": key, "text": text}, "incident": inc, "matches": matches,
         "report": out["report"], "steps": out["steps"], "queries": out["queries"], "llm_calls": out["llm_calls"],
-        "forced_final": out["forced_final"], "warnings": out["warnings"], "code_backend": code.backend,
+        "forced_final": out["forced_final"],
+        "preflight": {k: pf[k] for k in ("numbers", "resolved", "unresolved", "region", "switched")}, "warnings": out["warnings"], "code_backend": code.backend,
     }
     md = render_markdown(run)
     d = store.save_run(run, md, runs_base)
