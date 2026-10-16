@@ -39,6 +39,7 @@ Sirius (Arçelik/Beko saha servis platformu) incident'lerini analiz eden bir age
 python -m hibot analyze SM-1777386 --llm fake            # uçtan uca demo (LLM ve DB gerekmez, dry-run)
 python -m hibot analyze --text "..." [--region EU|APAC] [--live] [--llm http]
 python -m hibot feedback <run_id> --verdict correct|wrong|partial [--note "..."]
+python -m hibot cards list|show|confirm|reject|annotate   # bilinen sorun kartlarını incele
 ```
 `--live` için `HIBOT_DB_EU` / `HIBOT_DB_APAC`, `--llm http` için `HIBOT_LLM_*` gerekir. Bunlar repo kökündeki **git dışı `.env`** dosyasından otomatik yüklenir (şablon: `.env.example`). Şirket LLM'i ArGPT (`HIBOT_LLM_FORMAT=argpt`). Değişken yoksa sorgular dry-run çalışır ve rapor bunu açıkça belirtir.
 
