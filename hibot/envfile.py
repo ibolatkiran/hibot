@@ -6,6 +6,7 @@ already set in the real environment win. Values are never printed or logged.
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from typing import List, Optional
 
@@ -13,7 +14,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def load_env(path: Optional[Path] = None) -> List[str]:
-    """Return the NAMES (never values) of the variables that were loaded."""
+    """Return the NAMES (never values) of the variables that were loaded.
+
+    Safety: the real .env (prod DB / LLM credentials) is never loaded while unittest is running,
+    so the test suite can never reach production. Set HIBOT_NO_DOTENV=1 to disable it elsewhere.
+    """
+    if path is None and (os.environ.get("HIBOT_NO_DOTENV") == "1" or "unittest" in sys.modules):
+        return []
     p = Path(path) if path else ROOT / ".env"
     if not p.is_file():
         return []

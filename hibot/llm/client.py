@@ -164,12 +164,19 @@ def _flatten_argpt(messages, model, max_tokens, temperature, json_schema, env):
     }
 
 
-_TEXT_KEYS = ("completion", "text", "content", "result", "response", "output", "answer", "message", "data",
-              "choices", "value")
+_TEXT_KEYS = ("content", "completion", "text", "result", "response", "output", "answer", "data", "choices", "value")
 
 
 def _parse_argpt(data: Any) -> str:
-    """Response shape is undocumented: find the completion text wherever it is (verified by `python -m hibot.llm.probe`)."""
+    """Verified shape (probe, 2026-10-16): {"content": "<completion text>", "message": "success"}.
+
+    "message" is a status field, never the completion. Other shapes fall back to a tolerant search.
+    """
+    if isinstance(data, dict) and isinstance(data.get("content"), str):
+        status = data.get("message")
+        if isinstance(status, str) and status.lower() not in ("success", "ok", ""):
+            raise LLMError("ArGPT returned message=%r" % status[:200])
+        return data["content"]
     def find(node: Any, depth: int = 0) -> Optional[str]:
         if depth > 6:
             return None
@@ -189,6 +196,11 @@ def _parse_argpt(data: Any) -> str:
                             return hit
         return None
 
+    if isinstance(data, dict) and "choices" in data:
+        try:
+            return _parse_openai(data)
+        except LLMError:
+            pass
     if isinstance(data, dict) and data.get("isSuccess") is False:
         raise LLMError("ArGPT returned isSuccess=false: %s" % str(data.get("message") or data.get("errors"))[:300])
     text = find(data)
@@ -253,11 +265,13 @@ class HttpChatClient(LLMClient):
         url = e.get("HIBOT_LLM_URL", "")
         if not url:
             raise LLMError("HIBOT_LLM_URL is not set (see hibot/llm/README.md)")
-        return cls(url, api_key=e.get("HIBOT_LLM_API_KEY"), model=e.get("HIBOT_LLM_MODEL"),
-                   fmt=e.get("HIBOT_LLM_FORMAT", "openai").lower(),
-                   timeout=float(e.get("HIBOT_LLM_TIMEOUT", "120")), retries=int(e.get("HIBOT_LLM_RETRIES", "2")),
-                   auth_header=e.get("HIBOT_LLM_AUTH_HEADER"), auth_scheme=e.get("HIBOT_LLM_AUTH_SCHEME"),
-                   client_id=e.get("HIBOT_LLM_CLIENT_ID"), env=e, **kw)
+        args = dict(api_key=e.get("HIBOT_LLM_API_KEY"), model=e.get("HIBOT_LLM_MODEL"),
+                    fmt=e.get("HIBOT_LLM_FORMAT", "openai").lower(),
+                    timeout=float(e.get("HIBOT_LLM_TIMEOUT", "120")), retries=int(e.get("HIBOT_LLM_RETRIES", "2")),
+                    auth_header=e.get("HIBOT_LLM_AUTH_HEADER"), auth_scheme=e.get("HIBOT_LLM_AUTH_SCHEME"),
+                    client_id=e.get("HIBOT_LLM_CLIENT_ID"), env=e)
+        args.update(kw)                                   # explicit arguments override the environment
+        return cls(url, **args)
 
     def __repr__(self) -> str:                    # never leak the key
         return "HttpChatClient(url=%r, fmt=%r, model=%r)" % (self.url, self.fmt, self.model)

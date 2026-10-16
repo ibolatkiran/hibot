@@ -24,6 +24,7 @@ import hashlib
 import json
 import os
 import re
+import sys
 import threading
 import time
 from dataclasses import dataclass, field
@@ -84,10 +85,28 @@ class QueryResult:
 _KEY_RE = re.compile(r"(?:^|;)\s*([^=;]+?)\s*=", re.I)
 
 
-def build_connection_string(raw: str) -> str:
-    """Append ApplicationIntent=ReadOnly (and an application name) if absent."""
-    keys = {k.strip().lower().replace(" ", "") for k in _KEY_RE.findall(raw)}
-    out = raw.rstrip().rstrip(";")
+_PREFERRED_DRIVERS = ("ODBC Driver 18 for SQL Server", "ODBC Driver 17 for SQL Server", "SQL Server")
+
+
+def _default_driver() -> str:
+    pyodbc = sys.modules.get("pyodbc")                    # never import it here: importing hibot.db must not need it
+    installed = set(pyodbc.drivers()) if pyodbc else set()
+    return next((d for d in _PREFERRED_DRIVERS if d in installed), _PREFERRED_DRIVERS[0])
+
+
+def build_connection_string(raw: str, driver: Optional[str] = None) -> str:
+    """Normalise the driver part, add ApplicationIntent=ReadOnly and an app name if absent.
+
+    Accepts ADO.NET-style strings without Driver= and the common "{ODBC Driver 18 for SQL Server};Server=..."
+    form where the "Driver=" keyword was left out.
+    """
+    out = raw.strip().rstrip(";")
+    bare = re.match(r"^\s*(\{[^}]*\})\s*;", out)
+    if bare:
+        out = "Driver=%s;%s" % (bare.group(1), out[bare.end():])
+    keys = {k.strip().lower().replace(" ", "") for k in _KEY_RE.findall(out)}
+    if "driver" not in keys and "dsn" not in keys:
+        out = "Driver={%s};%s" % (driver or _default_driver(), out)
     if "applicationintent" not in keys:
         out += ";ApplicationIntent=ReadOnly"
     if "applicationname" not in keys and "app" not in keys:
