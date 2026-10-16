@@ -41,7 +41,8 @@ Yeni ticket ──► [1] Varlık çıkarımı (WO no, ülke→tenant, uygulama,
 - ✅ Şema kataloğu: `tools/schema_catalog` → `knowledge/schema`
 - ✅ Kod izlenebilirlik haritası: `tools/code_map` → `knowledge/codemap` (%92,8 önyüz→backend eşleşmesi)
 - ✅ Incident ön işleme: varlık çıkarımı, yeni sınıflama, BM25 benzerlik, 566 tekrar eden grup, Jira XML ayrıştırıcı (`tools/incidents`, 16 test)
-- 🔄 Güvenli SQL katmanı + teşhis sorgu şablonları (`hibot/db`, `knowledge/queries`)
+- ✅ Güvenli SQL katmanı + 24 teşhis sorgu şablonu (`hibot/db`, `knowledge/queries`, 193 test). Gerçek DB'de ilk çalıştırma ve varsayım doğrulaması DB erişimi bekliyor ⏳.
+- ✅ Jira XML toplu indirici: tarayıcı snippet'i (3'erli) + `collect.py` (`tools/jira_export`)
 - ⬜ codemap ↔ şema kataloğu birleşimi: endpoint → SP → SP'nin okuduğu/yazdığı tablolar (tek graf)
 - ⏳ Jira XML ile zenginleştirme (export gelince `tools/incidents/build.py` tekrar çalıştırılır)
 - ⏳ **DB izinden öğrenme** (D13): kapanmış ticket'lar için açılış–kapanış aralığında ilgili iş emri ve kayıtlarda ne değiştiğini çıkar (`Log.WorkOrderJsonLog`, `WorkOrderGpsInfo`, audit) → "fiilen yapılan çözüm" etiketi. Gerekenler: prod DB + XML'deki resolved tarihleri.
@@ -65,6 +66,7 @@ Yeni ticket ──► [1] Varlık çıkarımı (WO no, ülke→tenant, uygulama,
 - ⬜ Proaktif izleme: `SiriusInt.JobRunLog`, `Gateway.*` hataları, `ErpDocument.ErrorDescription`, `Log.DB_Errors` artışları
 
 ## Sıradaki iş (bir sonraki agent için)
-1. `tools/incidents` ve `hibot/db` alt agent sonuçlarını denetle, FINDINGS ve WORKLOG'u güncelle, commit et.
-2. codemap ↔ şema birleşimini yap.
-3. Kullanıcıdan gelenleri bekle: XML export, DB erişimi, AI endpoint dokümanı. Geldikçe ilgili ⏳ maddeleri aç.
+1. **Kullanıcı XML'leri indirince:** `python tools/jira_export/collect.py`, ardından `python tools/incidents/build.py`. Zenginleşen istatistikleri FINDINGS §7'ye işle.
+2. **DB erişimi gelince:** `HIBOT_DB_EU` / `HIBOT_DB_APAC` ortam değişkenlerini kullanıcı ayarlar (asla repoya yazılmaz). Önce `tenant_lookup` ve `wo_header` ile duman testi yap, sonra FINDINGS §8'deki varsayımları doğrula. Login'in `db_datareader`-only olduğunu teyit et.
+3. **Bağımsız işler (beklemeden yapılabilir):** codemap ↔ şema birleşimi (endpoint → SP → okunan/yazılan tablolar); Faz 2 orkestratör iskeleti (LLM istemcisi soyut olsun, endpoint dokümanı gelince doldurulur).
+4. **AI endpoint dokümanı gelince:** LLM istemcisi; embedding varsa BM25'in yanına ekle (D10).

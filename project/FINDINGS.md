@@ -214,6 +214,45 @@ Ayrıntılar: `knowledge/incidents/README.md`, `stats.md`. Bu sonuçlar sadece m
 - ~100 custom field'ın çoğu ITSM boilerplate ve filtreleniyor.
 - Not: tarayıcıdan "metin olarak" kaydedilen XML işe yaramaz (bkz. `docs/jira_export/README.md`).
 
+## 8. Güvenli SQL katmanı ve sorgu şablonları (`hibot/db`, `knowledge/queries`), 2026-10-16
+
+Ayrıntılar: `hibot/db/README.md`, `knowledge/queries/README.md`. Testler: `python -m unittest discover tests` (193 test; DB ve pyodbc gerekmiyor).
+
+**Bileşenler**
+
+| Modül | Görevi |
+|---|---|
+| `safe_sql.validate(sql, region=, allowed_params=, allow_pii=)` | Tokenizer tabanlı doğrulama: sadece SELECT / WITH…SELECT, tek statement, katalog allowlist'i (bölgeye göre), TOP enjeksiyonu (varsayılan 200, en fazla 1000), credential kolonları her zaman yasak, ad-hoc SQL'de PII kolonu yasak (şablonlarda serbest ama sonuç maskelenir), `SELECT *` güvenli kolon listesine çevrilir |
+| `masking.py` | Sonuçlardaki PII'yı maskeler |
+| `templates.py` | Şablonları yükler ve doğrular, parametreleri ODBC parametresi olarak bağlar |
+| `runner.py` | Ortam değişkenleri `HIBOT_DB_EU` / `HIBOT_DB_APAC`, `ApplicationIntent=ReadOnly`, READ UNCOMMITTED, 30 sn zaman aşımı, her denemede `logs/query_audit.jsonl` denetim logu (sonuç verisi yazılmaz; log yazılamıyorsa sorgu çalışmaz) |
+
+**24 şablon**
+- EU + APAC:
+  - İş emri: `wo_header`, `wo_status_timeline`, `wo_history_function`, `wo_field_changes`, `wo_status_transition_check`, `workcase_tree`, `wo_lines_totals`
+  - ERP/SAP ve malzeme: `wo_erp_sap`, `sap_rfc_rest_calls`, `material_orders`
+  - Hatalar: `db_errors_for_wo`, `db_errors_recent`, `db_errors_list`
+  - Bildirim, kuyruk ve job: `notifications_for_wo`, `outbound_queue_backlog`, `job_health`
+  - Bağlam ve lookup: `technician_appointment_context`, `product_sku_lookup`, `tenant_lookup`, `user_access_lookup`
+- Sadece EU: `wo_status_updater_log`, `mobile_api_trace`, `wo_discount_log`, `wo_debug_log`
+
+**Koordinatör denetimi**
+- 16 saldırı denemesinin hepsi reddedildi: stacked query, satır sonundaki yorumla gizlenen ikinci statement, EXEC, SELECT INTO, CTE içinde UPDATE, OPENQUERY, xp_cmdshell, `sys.*`, prosedürü fonksiyon gibi çağırma, WAITFOR, DECLARE/SET, UNION ile Password okuma, Unicode noktalı virgül, ad-hoc PII.
+- Geçerli CTE, window function ve TVF sorguları geçiyor. TOP 5000 → 200'e iniyor.
+- Tasarım notu: sorgu birincil anahtarla tek satıra gidiyorsa (`Id=@x`) TenantId uyarısı verilmiyor.
+- ⚠️ Düzeltme: `Operation.WorkOrder` tablosunda **`UpdateDate` kolonu yok** (§4'teki ilk DB raporu yanılmış). Validator bunu katalogdan doğru yakaladı.
+
+**Gerçek DB'de doğrulanması gereken varsayımlar**
+- `WorkOrderErp*.StatusId` → `Catalog.ErpDocumentStatus`
+- `SmsEmailSendingStatus` join'i
+- `TechnicianId` = `Employee.Id`
+
+**Bilinen boşluklar**
+- `ApplicationIntent=ReadOnly` sadece yönlendirme yapar. Asıl garanti **`db_datareader`-only bir login** olmalı; DB erişimi istenirken bu talep edilmeli.
+- Maliyet tahmini yok; pahalı sorguları sadece TOP ve zaman aşımı sınırlıyor.
+- Nitelenmemiş kolon adları katalogla kontrol edilmiyor.
+- Serbest metin içindeki isimler maskelenmeyebilir.
+
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
 Önyüzün çağırdığı ama backend'de karşılığı olmayan **109 benzersiz çağrı** var, liste: `knowledge/codemap/trace_index.json` → `unmatched_frontend_calls`. Örnekler:
