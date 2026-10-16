@@ -11,6 +11,9 @@ knowledge/**/*.json
 # Runtime
 logs/
 runs/
+# Batch learning raw output is derived from PROD data (kept local); summary .md files stay tracked
+knowledge/learning/*.jsonl
+knowledge/learning/checkpoint*
 .env
 .env.*
 !.env.example
