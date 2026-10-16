@@ -71,6 +71,22 @@ Yeni ticket ──► [1] Varlık çıkarımı (WO no, ülke→tenant, uygulama,
 - ⬜ Ana veri ve yetki taleplerini otomatik yönlendirme
 - ⬜ Proaktif izleme: `SiriusInt.JobRunLog`, `Gateway.*` hataları, `ErpDocument.ErrorDescription`, `Log.DB_Errors` artışları
 
+## Hedefe uzaklık değerlendirmesi (2026-10-16, kullanıcıyla paylaşıldı)
+İlk aşama hedefinin ~%60'ındayız.
+
+| Hedef | Durum |
+|---|---|
+| Analiz + kanıt sorguları | 🟢 Çalışıyor, ama sadece 3 ticket'ta denendi, **isabet ölçülmedi** |
+| "Sorun tam olarak nerede" | 🟡 DB kaynaklı vakalarda iyi; kod hatası vakaları canlıda hiç denenmedi |
+| Çözüm yolu | 🟡 Ana veri ve yetki (%43) canlıda denenmedi |
+| Öğrenme | 🟡 Mekanizma hazır; geri bildirim sadece CLI'dan |
+| Tekrar → doğrudan kök neden | 🔄 Kartla analiz yapılıyor |
+| Otomasyon | ⬜ |
+
+Kapsam sınırları: ticket'ların ~%34'ü Sirius dışı (Manusoft, Contact, Salesforce; kod ve DB'leri yok). APAC DB yok.
+
+**Kullanıcıyla kararlaştırılan sıra:** (1) değerlendirme seti ve isabet ölçümü → (2) kod hatası vakaları → (3) ana veri ve yetki → (4) developer'a teslim + tek tık geri bildirim → (5) APAC, sonra otomasyon.
+
 ## Sıradaki iş (bir sonraki agent için)
 Durum: ArGPT ve EU prod (read-only) bağlı, canlı analiz çalışıyor (FINDINGS §11–12). APAC DB yok.
 1. **Kart incelemesi (kullanıcı veya ekip):** 7 taslak kart (FINDINGS §13). Onay ve red için bir CLI komutu gerekebilir (`hibot cards review`). SM-2139009 kalıbı toplu analizle 3 ticket'ta doğrulandı.
