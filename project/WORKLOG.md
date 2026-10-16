@@ -43,6 +43,7 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
 21. **Toplu DB izi öğrenmesi** (Sonnet, LLM yok): 577 ticket, 43 dk, 0 hata. 40 yüksek manuel düzeltme şüphesi, 7 taslak kart. Koordinatör denetimi: 341 test geçiyor; Egypt, ZA, BA ve AZ kalıpları ticket metinleriyle doğrulandı; T49 ve T46 gürültü. Alt agent `tests/test_agent.py`'de örnek kart testini `batch_footprint` kartları için gevşetti (kabul edildi). → FINDINGS §13.
 22. Kullanıcı kararı D17: Egypt 2271 → 2257 bilinçli kısıt. Kullanıcı değerlendirme setini onayladı (öncelik sırası PLAN'da).
 23. **Kart CLI'ı ve kartla analiz** (Sonnet). Egypt kartı onaylandı. SM-2139002 ve SM-2126600 canlıda doğru kartla eşleşti, doğrulama destekliyor. Koordinatör denetimi: 367 test geçiyor, Egypt raporu doğru. → FINDINGS §14.
-24. Devam eden (Sonnet): değerlendirme seti (~40 ticket, ayrılmış test seti), çalıştırma aracı ve puanlama (`tools/eval`, `knowledge/eval`). Canlı ölçüm koordinatör tarafından sonra başlatılacak.
+24. Değerlendirme seti (Sonnet, `1e2e705`): 40 test + 5 dev ticket, 382 test. Kullanıcı 12 belirsiz etiketin gerçek cevabını bilmiyor.
+25. **Baseline ölçümü** (koordinatör arka planda çalıştırdı, `tools/eval/run_eval.py --tag baseline_20261016 --llm http --live --split test`): kanıt toplama çok iyi (WO %95, tenant %100, bulgu %92); sınıflandırma %40 / %50, emin-yanlış %23. → FINDINGS §15.
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.

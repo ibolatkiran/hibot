@@ -482,6 +482,39 @@ Ayrıntılar: `knowledge/learning/summary.md`. Deterministik çalışır, LLM ku
 - Egypt 2257 ve 2260 kartları hedef kelime geçmeyen bir ticket'ta berabere kalır.
 - Kart ID'si onaylandıktan sonra da `draft_` önekini taşıyor (kozmetik).
 
+## 15. İlk isabet ölçümü (baseline_20261016), 2026-10-16
+
+Rapor: `knowledge/eval/results_baseline_20261016.md`. Test seti 40 ticket, canlı (ArGPT + EU prod), 0 hata.
+
+**Başlık metrikleri** (güvenilir etiketler = yüksek + orta, n=30)
+
+| Metrik | Değer |
+|---|---|
+| İş emri çözümleme | **%95** |
+| Tenant çözümleme | **%100** |
+| Beklenen bulguların raporda bulunma oranı (78 kontrol) | **%92** |
+| Kart eşleşme oranı | %70 |
+| Sınıflandırma, kesin / esnek | %40 / %50 |
+| **Emin ama yanlış** (güven ≥ 0,7) | **%23 (7 ticket)** |
+| Dürüst "bilmiyorum" | %35 |
+| Ticket başına ortalama | 23,7 sn · 3,8 sorgu · 3,0 LLM çağrısı |
+
+**Kalibrasyon:** güven 0,7–1,0 aralığında isabet sadece %50 (aşırı özgüven). 0,4–0,7 aralığında %83. 0–0,4 aralığında %0 (bunlar zaten "unknown").
+
+**Yorum**
+1. **Kanıt toplama çok iyi, sınıflandırma ve kalibrasyon zayıf.** HiBot doğru iş emrini, tenant'ı ve DB izini neredeyse her zaman buluyor; sorun son etiketi seçmekte ve güven skorunda.
+2. **Sınıflandırma şeması belirsiz.** Statü vakalarında kök neden "config" (geçiş yok) ama yapılan iş "data_correction" (elle düzeltme). 7 "emin ama yanlış"ın 3'ü bu belirsizlikten. → **İki eksenli sınıflandırma önerisi:** `root_cause_type` (config / code / master_data / integration / user / access / unknown) + `resolution_action` (data_fix / config_change / code_change / explain / grant_access / escalate).
+3. **Pencerede değişiklik olmayan statü vakaları** (2 CW): HiBot "user_error" diyor, etiket "data_correction". Belki düzeltme başka bir tabloda yapıldı; etiketler de belirsiz.
+4. **Yetki talepleri:** 4 ticket'ın 3'ü "unknown", **0 sorgu**. Yetki için temel sorgu seti ve kullanıcı kodu çıkarımı yok → en kolay iyileştirme.
+5. **Entegrasyon vakaları:** %67 "unknown", iş emri yoksa sorgu yok. Ticket zamanı etrafında `job_health`, `outbound_queue_backlog` ve `db_errors_recent` gibi zaman penceresi sorguları eksik.
+6. **Gerçek emin-yanlışlar:**
+   - SM-2001523 (bildirim; config bekleniyordu, user_error 0,86 dedi)
+   - SM-2128512 (user_error bekleniyordu, access 0,78 dedi)
+   - SM-2122464 ve SM-2010200 (pencerede değişiklik yok)
+7. **Kod hatası ölçülemiyor:** setteki gümüş etiketlerin hiçbiri güvenilir bir `code_defect` değil.
+
+Etiket notu: 12 ticket "insan incelemesi gerekli" işaretli. Kullanıcı da gerçek çözümü bilmiyor (2026-10-16), etiketler gümüş kalıyor.
+
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
 Önyüzün çağırdığı ama backend'de karşılığı olmayan **109 benzersiz çağrı** var, liste: `knowledge/codemap/trace_index.json` → `unmatched_frontend_calls`. Örnekler:
