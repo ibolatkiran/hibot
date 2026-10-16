@@ -7,7 +7,16 @@ Elimizdeki `kronik_sorunlar_son_1_yil_data.json` dosyasında açıklama 400 kara
 
 ## Adımlar (19 parça, her biri 200 key)
 
-**Yöntem A: Doğrudan URL (en hızlısı)**
+**Yöntem 0: Toplu indirici (önerilen, ~10–15 dk)**
+1. digiport.arcelik.com'da oturum aç. Herhangi bir Jira sayfasında **F12 → Console** aç.
+2. [`download_snippet.js`](download_snippet.js) dosyasının **tamamını** yapıştırıp Enter'a bas. Chrome yapıştırmayı engellerse önce `allow pasting` yaz.
+3. Snippet parçaları 3'erli indirir, her dosyanın XML olduğunu ve tam geldiğini kontrol eder, hata olursa 3 kez dener. Tarayıcı "birden fazla dosya indirme" izni isterse **İzin ver** de.
+4. Bitince Console'da bir özet tablo görünür. Başarısız parça varsa snippet'teki `ONLY = [...]` satırını onlarla doldurup tekrar çalıştır.
+5. `python tools/jira_export/collect.py`: İndirilenler klasöründeki `chunk_*.xml` dosyalarını doğrular (beklenen key'ler tam mı) ve `raw/` altına taşır.
+
+Snippet API token kullanmaz. Senin tarayıcı oturumunla, elle tıklamakla aynı export adresini çağırır. Hiçbir cookie veya secret dosyaya yazılmaz.
+
+**Yöntem A: Doğrudan URL**
 1. Tarayıcıda digiport.arcelik.com'a giriş yap.
 2. `jql/urls.txt` dosyasındaki her URL'yi sırayla tarayıcıda aç. Her biri bir XML dosyası indirir ya da gösterir.
 3. Gelen dosyayı `raw/chunk_01.xml`, `raw/chunk_02.xml`, … adıyla kaydet. Tarayıcıda açılırsa Ctrl+S ile kaydedebilirsin.

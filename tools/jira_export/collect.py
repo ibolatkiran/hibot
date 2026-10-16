@@ -1,0 +1,78 @@
+"""Move downloaded Jira XML chunks into docs/jira_export/raw and validate them.
+
+Looks in the Downloads folder (or --src) for chunk_NN.xml, including browser
+duplicates like "chunk_03 (1).xml" (newest wins), checks that each file is a
+complete RSS export containing exactly the keys of its JQL chunk, and moves it.
+
+Usage (from repo root):
+    python tools/jira_export/collect.py [--src PATH] [--dry-run]
+"""
+import argparse
+import re
+import shutil
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+JQL_DIR = ROOT / "docs" / "jira_export" / "jql"
+RAW = ROOT / "docs" / "jira_export" / "raw"
+NAME_RE = re.compile(r"^(chunk_\d{2})(?: \(\d+\))?\.xml$")
+
+
+def validate(path: Path, expected: set) -> tuple[bool, str]:
+    with path.open("rb") as f:
+        head = f.read(300).decode("utf-8", "replace")
+        f.seek(max(0, path.stat().st_size - 100))
+        tail = f.read().decode("utf-8", "replace")
+    if not re.search(r"<rss|<\?xml", head):
+        return False, "XML değil (tarayıcıdan metin olarak kaydedilmiş olabilir)"
+    if not re.search(r"</rss>\s*$", tail):
+        return False, "yarım dosya (</rss> yok)"
+    text = path.read_text(encoding="utf-8", errors="replace")
+    got = set(re.findall(r'<key id="\d+">(SM-\d+)</key>', text))
+    missing, extra = expected - got, got - expected
+    if extra:
+        return False, f"yanlış parça? beklenmeyen {len(extra)} key"
+    note = f"{len(got)}/{len(expected)} key"
+    if missing:
+        # Usually permission-restricted tickets; keep the file but report.
+        note += f", eksik {len(missing)}: {', '.join(sorted(missing)[:5])}{'…' if len(missing) > 5 else ''}"
+    return True, note
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--src", type=Path, default=Path.home() / "Downloads")
+    ap.add_argument("--dry-run", action="store_true")
+    args = ap.parse_args()
+
+    expected = {p.stem: set(re.findall(r"SM-\d+", p.read_text(encoding="utf-8")))
+                for p in sorted(JQL_DIR.glob("chunk_*.jql"))}
+
+    candidates = {}
+    for p in args.src.glob("chunk_*.xml"):
+        m = NAME_RE.match(p.name)
+        if m and (m[1] not in candidates or p.stat().st_mtime > candidates[m[1]].stat().st_mtime):
+            candidates[m[1]] = p
+
+    RAW.mkdir(parents=True, exist_ok=True)
+    print(f"{'parça':<10} {'durum':<6} {'MB':>6}  not")
+    for chunk in sorted(expected):
+        src = candidates.get(chunk)
+        dest = RAW / f"{chunk}.xml"
+        if not src:
+            if dest.exists():
+                ok, note = validate(dest, expected[chunk])
+                print(f"{chunk:<10} {'raw' if ok else 'BOZUK':<6} {dest.stat().st_size / 1e6:>6.1f}  zaten raw/ altında; {note}")
+            else:
+                print(f"{chunk:<10} {'YOK':<6} {'-':>6}  indirilmemiş")
+            continue
+        ok, note = validate(src, expected[chunk])
+        print(f"{chunk:<10} {'OK' if ok else 'HATA':<6} {src.stat().st_size / 1e6:>6.1f}  {note}")
+        if ok and not args.dry_run:
+            shutil.move(str(src), dest)
+
+    print(f"\nSonraki adım: python tools/incidents/build.py")
+
+
+if __name__ == "__main__":
+    main()
