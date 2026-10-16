@@ -1,0 +1,20 @@
+# Raw source data (PII, large) — kept on disk, documented in CLAUDE.md
+docs/*.json
+docs/*.html
+docs/jira_export/raw/
+
+# Generated knowledge (regenerate with tools/*/build.py); READMEs, md reports and query templates stay tracked
+knowledge/**/*.json
+
+# Runtime
+logs/
+.env
+.env.*
+*.pfx
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/

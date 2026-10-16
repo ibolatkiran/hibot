@@ -1,0 +1,48 @@
+# HiBot: Sirius Incident Root-Cause Agent
+
+> **Yeni bir agent/oturum olarak buradan başla.** Bu dosya otomatik yüklenir. Devamını sırayla oku:
+> 1. [project/PLAN.md](project/PLAN.md): fazlar, şu anki durum, **sıradaki iş**
+> 2. [project/DECISIONS.md](project/DECISIONS.md): alınmış kararlar (tekrar tartışma)
+> 3. [project/FINDINGS.md](project/FINDINGS.md): keşif bulguları (veri, önyüz, backend, DB)
+> 4. [project/WORKLOG.md](project/WORKLOG.md): kronolojik iş günlüğü
+
+## Amaç
+Sirius (Arçelik/Beko saha servis platformu) incident'lerini analiz eden bir agent. Developer'a sorunun **tam olarak nereden** kaynaklandığını arkada çalıştırdığı **read-only SQL sorgularının kanıtlarıyla** iletir ve çözüm yolunu gösterir. Benzer vakalardan öğrenir: tekrar eden bir sorunda kök nedeni doğrudan bulur. Uzun vadede tam otomasyon hedefleniyor (Jira'ya otomatik yorum, proaktif log izleme).
+
+## Çalışma şekli (kullanıcı talebi)
+- Ana oturum (Opus) planlar, koordine eder, **denetler**. İşleri alt agent'lar yapar.
+- **Alt agent'lar her zaman `model: "sonnet"` ile başlatılır** (token bütçesi kısıtlı). İş kapsamı daraltılmaz. İşe uygun agent tipi seçilir: read-only kod keşfi için Explore, script çalıştırılacaksa general-purpose.
+- Alt agent raporları sohbette kaybolur. **Her raporun özünü project/FINDINGS.md'ye yaz, WORKLOG ve PLAN durumunu güncelle, commit et.** Kullanıcının git üzerinde tam onayı var.
+- Kullanıcıyla Türkçe konuşulur. Kod ve modül README'leri İngilizce yazılır.
+
+## Repo haritası
+| Yol | İçerik |
+|---|---|
+| `docs/kronik_sorunlar_son_1_yil_data.json` | Kaynak veri: son 1 yıla ait 3.790 Jira incident'i (git dışında, PII içeriyor) |
+| `docs/jira_export/` | Jira XML export talimatı + JQL parçaları; ham XML'ler `raw/` altına gelecek (git dışında) |
+| `tools/schema_catalog/` | sqlproj → DB şema kataloğu üreteci |
+| `tools/code_map/` | 4 önyüz + SiriusApi → ekran→endpoint→SP izlenebilirlik haritası üreteci |
+| `tools/incidents/` | incident ön işleme (varlık çıkarımı, sınıflama, benzerlik, Jira XML ayrıştırıcı) |
+| `tools/jira_export/make_jql.py` | Jira XML export için JQL parçaları |
+| `hibot/` | çalışma zamanı paketi (şimdilik `hibot/db`: güvenli SQL, maskeleme, runner) |
+| `knowledge/` | üretilmiş bilgi tabanı: `schema/`, `codemap/`, `incidents/`, `queries/` (SQL şablonları) |
+| `tests/` | unittest'ler: `python -m unittest discover tests` |
+
+## Bilgi tabanını yeniden üretme
+```bash
+# repo kökünden, PYTHONIOENCODING=utf-8 ile
+python tools/schema_catalog/build.py      # ~5 sn  -> knowledge/schema/
+python tools/code_map/build.py            # ~10 sn -> knowledge/codemap/
+python tools/incidents/build.py           # -> knowledge/incidents/
+```
+`knowledge/**/*.json` git'te tutulmaz, bu komutlarla yeniden üretilir. README'ler ve `knowledge/queries/` git'tedir.
+
+## İlgili repolar (read-only, değiştirme)
+- Önyüzler (React 16, CRA): `d:\repos\SiriusHeadOffice` (=SIRIUS Portal), `d:\repos\SiriusCallCenter` (=SIRIUS CRM), `d:\repos\SiriusServiceShopCallCenter` (=SIRIUS Partner), `d:\repos\SiriusTechnician` (=SIRIUS Technician)
+- Backend: `d:\repos\SiriusApi` (.NET 5, Dapper + SP ağırlıklı)
+- DB (SSDT sqlproj): `d:\repos\sirius-eu\gfsm-europe` (EU, üst küme), `d:\repos\gfsm-apac\ahsiriusdbsrv.database.windows.net` (APAC)
+
+## Güvenlik kuralları (kesin)
+- DB erişimi **sadece read-only prod**. SQL her zaman `hibot/db/safe_sql.py` doğrulamasından geçer: sadece SELECT, TOP limiti, hassas ve PII kolon engeli. Bağlantı bilgisi ortam değişkenindedir (`HIBOT_DB_EU`, `HIBOT_DB_APAC`), **asla koda ya da loga yazılmaz**.
+- Secret içeren dosyalar **indekslenmez ve LLM'e gönderilmez**: `appsettings*.json`, `.env*`, `.env-cmdrc.json`, `translate.js`, `web.config`, `*.pfx`.
+- LLM olarak şirketin sağladığı AI endpoint'i kullanılır. **Tool calling desteği yok**, orkestrasyon kendi kodumuzda (bkz. DECISIONS).
