@@ -23,5 +23,8 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
 
 10. Jira XML toplu indirici (koordinatör yazdı): `download_snippet.js` (DevTools Console, 3'erli, XML ve bütünlük kontrolü, yeniden deneme) + `collect.py` (İndirilenler → raw, key doğrulaması). Snippet kullanıcının tarayıcısında henüz çalıştırılmadı.
 11. **Güvenli SQL katmanı** (`hibot/db`, 24 şablon, 193 test; Sonnet). Koordinatör denetimi: 16/16 saldırı reddedildi, geçerli sorgular geçiyor, secret yok. → FINDINGS §8. Not: `WorkOrder.UpdateDate` kolonu yok, FINDINGS §4'teki ilk rapor yanlıştı.
+12. Jira snippet'i kullanıcıda hata verdi: chunk 02–04 "XML değil" diye reddedildi. Sebep: Jira, `<rss`'ten önce ~500 karakterlik bir yorum bloğu yazıyor; kontrol ilk 300 bayta bakıyordu. Düzeltme: 16 KB'a bakılıyor, hata mesajına teşhis bilgisi eklendi (`d8f269c`). `collect.py`'da aynı düzeltme yapıldı.
+13. **Birleşik bilgi grafı** (Sonnet). Koordinatör denetimi: history zinciri, serbest metin araması ve hata metni araması doğru. → FINDINGS §9.
+14. Devam eden: Faz 2 orkestratör iskeleti (Sonnet): `hibot/llm`, `hibot/agent`, `hibot/prompts`, CLI, FakeLLM demosu.
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.

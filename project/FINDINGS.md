@@ -253,6 +253,30 @@ Ayrıntılar: `hibot/db/README.md`, `knowledge/queries/README.md`. Testler: `pyt
 - Nitelenmemiş kolon adları katalogla kontrol edilmiyor.
 - Serbest metin içindeki isimler maskelenmeyebilir.
 
+## 9. Birleşik bilgi grafı (`tools/graph` → `knowledge/graph`, `hibot/knowledge/graph.py`), 2026-10-16
+
+Ayrıntılar: `knowledge/graph/README.md`. Kod haritası ve şema kataloğu tek grafta birleşti: 7.487 düğüm, 16.954 kenar, `graph.json` 4,5 MB. Üretim komutu: `python tools/graph/build.py` (~3 sn).
+
+**API:** `CodeGraph.load()` · `trace_endpoint` · `trace_screen` · `trace_db_object` (ters yön; tablo, kolon veya trigger alır) · `search_error_text` · `search_text` (BM25).
+
+**Kapsama**
+- Endpoint'lerin %89,6'sı en az bir tabloya ulaşıyor (SP veya inline SQL üzerinden %66,7).
+- Backup olmayan SP'lerin %95–97'sinin tabloları çözülmüş.
+- Trigger zinciri de izleniyor. Örnek: `SetSiriusWorkOrderStatusUpdate` → `Operation.WorkOrder` → `TR_WorkOrder_U` → `Log.WorkOrderJsonLog`.
+
+**Doğrulama**
+- Alt agent 13 zinciri elle kontrol etti, hatalı zincir bulmadı.
+- Koordinatör kontrolü:
+  - History endpoint'inin 4 uygulamada da çağıranı var; fonksiyon 12 tablo okuyor, hiçbirine yazmıyor.
+  - "work order history only one record" serbest metni → doğru endpoint, fonksiyon ve ekran (ilk 3 sonuç).
+  - "Failed to change status please check data!" → `WorkOrder.sql:196` (`TR_WorkOrder_U`) ve 89 endpoint.
+
+**Sınırlamalar**
+- `search_text` kelime eşleşmesine dayanıyor. Ana veri taleplerinde (ör. "Missing tenant for SKU") ilgisiz SP'ler dönüyor; bu vakaları **kartlar** çözecek.
+- Paylaşılan trigger'lar ters izlemede gürültü yapıyor (`via_trigger` ile işaretli ve sonda sıralanıyor).
+- ORM tablo adlarında şema belirsizliği var: `WorkOrder` 5 şemada var.
+- Portal'daki 337 ekrandan sadece 200'ünün doğrudan route'u var.
+
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
 Önyüzün çağırdığı ama backend'de karşılığı olmayan **109 benzersiz çağrı** var, liste: `knowledge/codemap/trace_index.json` → `unmatched_frontend_calls`. Örnekler:

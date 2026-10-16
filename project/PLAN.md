@@ -43,7 +43,7 @@ Yeni ticket ──► [1] Varlık çıkarımı (WO no, ülke→tenant, uygulama,
 - ✅ Incident ön işleme: varlık çıkarımı, yeni sınıflama, BM25 benzerlik, 566 tekrar eden grup, Jira XML ayrıştırıcı (`tools/incidents`, 16 test)
 - ✅ Güvenli SQL katmanı + 24 teşhis sorgu şablonu (`hibot/db`, `knowledge/queries`, 193 test). Gerçek DB'de ilk çalıştırma ve varsayım doğrulaması DB erişimi bekliyor ⏳.
 - ✅ Jira XML toplu indirici: tarayıcı snippet'i (3'erli) + `collect.py` (`tools/jira_export`)
-- ⬜ codemap ↔ şema kataloğu birleşimi: endpoint → SP → SP'nin okuduğu/yazdığı tablolar (tek graf)
+- ✅ Birleşik bilgi grafı: codemap ↔ şema, ileri ve ters izleme, hata metni araması (`tools/graph`, `hibot/knowledge`, 12 test)
 - ⏳ Jira XML ile zenginleştirme (export gelince `tools/incidents/build.py` tekrar çalıştırılır)
 - ⏳ **DB izinden öğrenme** (D13): kapanmış ticket'lar için açılış–kapanış aralığında ilgili iş emri ve kayıtlarda ne değiştiğini çıkar (`Log.WorkOrderJsonLog`, `WorkOrderGpsInfo`, audit) → "fiilen yapılan çözüm" etiketi. Gerekenler: prod DB + XML'deki resolved tarihleri.
 - ⏳ Bilinen Sorun Kartları v1: en büyük ~30 tekrar eden grup için kod haritası, şema ve DB izi üzerinden taslak kart; developer bir kez ✅/❌ verir → `knowledge/cards/`. Jira yorumlarına **güvenilmez** (D13).
