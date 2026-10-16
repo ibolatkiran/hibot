@@ -277,6 +277,46 @@ Ayrıntılar: `knowledge/graph/README.md`. Kod haritası ve şema kataloğu tek 
 - ORM tablo adlarında şema belirsizliği var: `WorkOrder` 5 şemada var.
 - Portal'daki 337 ekrandan sadece 200'ünün doğrudan route'u var.
 
+## 10. Faz 2 orkestratör iskeleti (`hibot/llm`, `hibot/agent`, `hibot/prompts`), 2026-10-16
+
+Ayrıntılar: `hibot/agent/README.md`, `hibot/llm/README.md`. Sahte LLM ve DB olmadan uçtan uca çalışıyor: `python -m hibot analyze SM-1777386 --llm fake`.
+
+**Akış**
+1. intake (Jira key veya serbest metin; varlık çıkarımı)
+2. benzer vakalar (BM25 / önceden hesaplanmış)
+3. kart eşleşmesi
+4. kod bağlamı (CodeGraph)
+5. soruşturma döngüsü: LLM JSON aksiyonu → doğrulama → çalıştırma → maskelenmiş gözlem
+6. `final_report` → Türkçe Markdown + JSON (`runs/<run_id>/`)
+
+**Aksiyonlar:** `run_query` (şablon), `run_sql` (ad-hoc, safe_sql, PII yasak), `inspect_code` (graf), `read_source` (izinli repolar, secret listesi, `..` yasak, en fazla 120 satır), `final_report`.
+
+**Bütçe:** 8 adım, 6 sorgu, 2 ad-hoc sorgu. Bütçe biterse LLM'den bir kez zorla `final_report` istenir; o da başarısız olursa yedek rapor oluşturulur.
+
+**Güvenilirlik kuralları**
+- Varsayılan mod dry-run.
+- Çalışmayan sorgu kanıt sayılmaz ve rapor bunu en üstte uyarır.
+- Hiç sorgu çalışmadıysa güven skoru en fazla 0,6.
+
+**Geri bildirim**
+- `correct`: `suggested_card` onaylı karta dönüşür ya da mevcut karta kanıt olarak eklenir.
+- `wrong`: kartın güven skoru düşer.
+- Reddedilmiş kart yeniden canlanmaz.
+- Demo çalıştırmaları öğrenmeye katılmaz.
+
+**Kartlar:** format `hibot/agent/cards.py` ve README'de. `knowledge/cards/` altında 2 tane **elle yazılmış ÖRNEK taslak** var; bunlar öğrenilmiş değil.
+
+**LLM:** `HttpChatClient` openai, anthropic ve raw formatlarını destekliyor; endpoint'e özgü kısım tek bir `_FORMATS` tablosunda. Şirket endpoint'iyle **henüz test edilmedi**; prompt'lar gerçek bir modelde denenmedi.
+
+**Koordinatör denetimi**
+- 287 test geçiyor (1 symlink testi atlanıyor).
+- Demo raporu doğru: "0 sorgu çalıştırıldı" uyarısı en üstte, bölge APAC (AHSH ticket'ı) doğru seçildi.
+- `read_source` için 5 saldırı denemesinin hepsi reddedildi: appsettings, translate.js, `..` ile atlama, `.ssh`, HiBot'un ham verisi.
+
+**Açık konular**
+- Demo, ticket'ta yoksa yer tutucu ID'ler kullanıyor (`tenant_id=1`, WO 12345678).
+- Gerekli bir varlık eksikse kartın skoru yarıya düşüyor ve kart adaylardan çıkabiliyor.
+
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
 Önyüzün çağırdığı ama backend'de karşılığı olmayan **109 benzersiz çağrı** var, liste: `knowledge/codemap/trace_index.json` → `unmatched_frontend_calls`. Örnekler:

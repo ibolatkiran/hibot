@@ -5,9 +5,12 @@ docs/jira_export/raw/
 
 # Generated knowledge (regenerate with tools/*/build.py); READMEs, md reports and query templates stay tracked
 knowledge/**/*.json
+# ...except learned knowledge, which cannot be regenerated: known-issue cards (feedback/*.jsonl is tracked too)
+!knowledge/cards/*.json
 
 # Runtime
 logs/
+runs/
 .env
 .env.*
 *.pfx

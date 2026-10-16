@@ -1,0 +1,59 @@
+{
+  "id": "example_history_shows_one_record",
+  "title": "EXAMPLE: Work order history shows only 1 record",
+  "symptom_signature": {
+    "problem_type": null,
+    "app": null,
+    "keywords": [
+      "history",
+      "only 1 record",
+      "only one record",
+      "history shows"
+    ],
+    "entity_requirements": []
+  },
+  "root_cause": "EXAMPLE / UNVERIFIED seed card. dbo.GetSiriusWorkOrderHistory INNER JOINs Catalog.Status and Catalog.AppTranslationEntry in the requested language: status rows without a translation in that language are dropped, or Operation.WorkOrderGpsInfo really holds a single row.",
+  "verification_queries": [
+    {
+      "query_id": "wo_history_function",
+      "params_from_entities": {
+        "WorkOrderId": "entities.work_order_ids[0]",
+        "TenantId": "$tenant"
+      }
+    },
+    {
+      "query_id": "wo_status_timeline",
+      "params_from_entities": {
+        "WorkOrderId": "entities.work_order_ids[0]",
+        "TenantId": "$tenant"
+      }
+    }
+  ],
+  "fix_steps": [
+    "Compare RawGpsRowsThisOrder with FunctionRows in wo_history_function.",
+    "RawRowsMissingTranslation > 0: add the missing Catalog.AppTranslationEntry rows (master data).",
+    "Raw = 1: history was never written, check wo_field_changes and the mobile/status update path."
+  ],
+  "code_locations": [
+    {
+      "repo": "gfsm-europe",
+      "path": "dbo/Functions/GetSiriusWorkOrderHistory.sql",
+      "line": 1,
+      "why": "history function with INNER JOINs"
+    }
+  ],
+  "confidence": 0.4,
+  "status": "draft",
+  "evidence_tickets": [
+    "SM-1777386"
+  ],
+  "created_by": "EXAMPLE seed (hand written, not learned from a real analysis)",
+  "created_at": "2026-10-16T00:00:00+00:00",
+  "history": [
+    {
+      "ts": "2026-10-16T00:00:00+00:00",
+      "event": "created",
+      "note": "EXAMPLE seed card; hypothesis derived from the wo_history_function template, not verified on production data."
+    }
+  ]
+}

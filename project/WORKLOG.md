@@ -25,6 +25,6 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
 11. **Güvenli SQL katmanı** (`hibot/db`, 24 şablon, 193 test; Sonnet). Koordinatör denetimi: 16/16 saldırı reddedildi, geçerli sorgular geçiyor, secret yok. → FINDINGS §8. Not: `WorkOrder.UpdateDate` kolonu yok, FINDINGS §4'teki ilk rapor yanlıştı.
 12. Jira snippet'i kullanıcıda hata verdi: chunk 02–04 "XML değil" diye reddedildi. Sebep: Jira, `<rss`'ten önce ~500 karakterlik bir yorum bloğu yazıyor; kontrol ilk 300 bayta bakıyordu. Düzeltme: 16 KB'a bakılıyor, hata mesajına teşhis bilgisi eklendi (`d8f269c`). `collect.py`'da aynı düzeltme yapıldı.
 13. **Birleşik bilgi grafı** (Sonnet). Koordinatör denetimi: history zinciri, serbest metin araması ve hata metni araması doğru. → FINDINGS §9.
-14. Devam eden: Faz 2 orkestratör iskeleti (Sonnet): `hibot/llm`, `hibot/agent`, `hibot/prompts`, CLI, FakeLLM demosu.
+14. **Faz 2 orkestratör iskeleti** (Sonnet). Koordinatör denetimi: 287 test geçiyor, demo uçtan uca çalışıyor, `read_source` 5/5 saldırıyı reddetti. → FINDINGS §10. `.gitignore`: `runs/` dışarıda; `knowledge/cards/*.json` ve `feedback/` git'te (öğrenilen bilgi).
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.

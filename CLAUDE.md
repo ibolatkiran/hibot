@@ -24,9 +24,23 @@ Sirius (Arçelik/Beko saha servis platformu) incident'lerini analiz eden bir age
 | `tools/code_map/` | 4 önyüz + SiriusApi → ekran→endpoint→SP izlenebilirlik haritası üreteci |
 | `tools/incidents/` | incident ön işleme (varlık çıkarımı, sınıflama, benzerlik, Jira XML ayrıştırıcı) |
 | `tools/jira_export/make_jql.py` | Jira XML export için JQL parçaları |
-| `hibot/` | çalışma zamanı paketi (şimdilik `hibot/db`: güvenli SQL, maskeleme, runner) |
-| `knowledge/` | üretilmiş bilgi tabanı: `schema/`, `codemap/`, `incidents/`, `queries/` (SQL şablonları) |
-| `tests/` | unittest'ler: `python -m unittest discover tests` |
+| `tools/graph/` | codemap + şema → birleşik bilgi grafı üreteci |
+| `hibot/db/` | güvenli read-only SQL: validator, maskeleme, şablonlar, runner |
+| `hibot/knowledge/` | `CodeGraph`: ekran↔endpoint↔SP↔tablo↔trigger izleme, hata metni ve serbest metin araması |
+| `hibot/llm/` | LLM istemcisi (FakeLLM + HTTP; `HIBOT_LLM_URL/_API_KEY/_MODEL/_FORMAT`), JSON çıkarma, doğrulama ve onarım |
+| `hibot/agent/` | orkestratör: intake → benzer vakalar → kartlar → kod bağlamı → soruşturma döngüsü → rapor → geri bildirim |
+| `hibot/prompts/` | sistem ve aksiyon prompt'ları |
+| `knowledge/` | `schema/`, `codemap/`, `graph/`, `incidents/` (üretilir), `queries/` (SQL şablonları), `cards/` (bilinen sorun kartları, **öğrenilen bilgi, git'te**), `feedback/` (git'te) |
+| `runs/` | her analizin girdisi, adımları ve raporu (git dışında) |
+| `tests/` | unittest'ler: `python -m unittest discover tests` (~287 test) |
+
+## Kullanım
+```bash
+python -m hibot analyze SM-1777386 --llm fake            # uçtan uca demo (LLM ve DB gerekmez, dry-run)
+python -m hibot analyze --text "..." [--region EU|APAC] [--live] [--llm http]
+python -m hibot feedback <run_id> --verdict correct|wrong|partial [--note "..."]
+```
+`--live` için `HIBOT_DB_EU` / `HIBOT_DB_APAC`, `--llm http` için `HIBOT_LLM_*` ortam değişkenleri gerekir. Değişken yoksa sorgular dry-run çalışır ve rapor bunu açıkça belirtir.
 
 ## Bilgi tabanını yeniden üretme
 ```bash
@@ -34,6 +48,7 @@ Sirius (Arçelik/Beko saha servis platformu) incident'lerini analiz eden bir age
 python tools/schema_catalog/build.py      # ~5 sn  -> knowledge/schema/
 python tools/code_map/build.py            # ~10 sn -> knowledge/codemap/
 python tools/incidents/build.py           # -> knowledge/incidents/
+python tools/graph/build.py               # ~3 sn  -> knowledge/graph/  (schema + codemap'ten sonra)
 ```
 `knowledge/**/*.json` git'te tutulmaz, bu komutlarla yeniden üretilir. README'ler ve `knowledge/queries/` git'tedir.
 

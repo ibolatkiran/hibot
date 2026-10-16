@@ -1,0 +1,52 @@
+{
+  "id": "example_missing_tenant_for_sku",
+  "title": "EXAMPLE: Missing tenant for SKU in Sirius (Poland)",
+  "symptom_signature": {
+    "problem_type": "master_data_request",
+    "app": null,
+    "keywords": [
+      "missing tenant",
+      "tenant",
+      "sku",
+      "product not found"
+    ],
+    "entity_requirements": [
+      "sku_codes"
+    ]
+  },
+  "root_cause": "EXAMPLE / UNVERIFIED seed card. The SKU exists in Catalog.Product but has no Catalog.ProductTenant row for the country's tenant (or the product master sync did not deliver it), so the product is invisible in that market. This is a master-data request, not a code defect.",
+  "verification_queries": [
+    {
+      "query_id": "product_sku_lookup",
+      "params_from_entities": {
+        "Sku": "entities.sku_codes[0]",
+        "TenantId": "$tenant"
+      }
+    },
+    {
+      "query_id": "tenant_lookup",
+      "params_from_entities": {}
+    }
+  ],
+  "fix_steps": [
+    "Resolve the TenantId of the country with tenant_lookup.",
+    "Run product_sku_lookup: NO ROWS = product missing from the product master (check the product sync job with job_health); AssignedToTenant = 0 = needs a Catalog.ProductTenant assignment.",
+    "Route to the master-data team to assign the SKU to the tenant; no code change needed."
+  ],
+  "code_locations": [],
+  "confidence": 0.4,
+  "status": "draft",
+  "evidence_tickets": [
+    "SM-1876137",
+    "SM-1887522"
+  ],
+  "created_by": "EXAMPLE seed (hand written, not learned from a real analysis)",
+  "created_at": "2026-10-16T00:00:00+00:00",
+  "history": [
+    {
+      "ts": "2026-10-16T00:00:00+00:00",
+      "event": "created",
+      "note": "EXAMPLE seed card shipped with the card format; evidence tickets are look-alike group G002 members, root cause not verified."
+    }
+  ]
+}

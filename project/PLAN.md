@@ -49,10 +49,12 @@ Yeni ticket ──► [1] Varlık çıkarımı (WO no, ülke→tenant, uygulama,
 - ⏳ Bilinen Sorun Kartları v1: en büyük ~30 tekrar eden grup için kod haritası, şema ve DB izi üzerinden taslak kart; developer bir kez ✅/❌ verir → `knowledge/cards/`. Jira yorumlarına **güvenilmez** (D13).
 
 ### Faz 2: MVP teşhis agent'ı
-- ⏳ LLM istemcisi (şirket endpoint'i), JSON çıktı doğrulama ve yeniden deneme
-- ⬜ Orkestratör: ticket → varlık → kart eşleşmesi → soruşturma döngüsü (adım/bütçe limiti) → rapor
-- ⬜ Rapor formatı (Markdown): kök neden, kanıt, kod konumu, çözüm, güven skoru, kullanılan sorgular
-- ⬜ CLI: `python -m hibot analyze SM-xxxxxx` veya serbest metin
+- ✅ LLM istemci katmanı (FakeLLM + HttpChatClient), JSON çıkarma, doğrulama ve onarım döngüsü
+- ⏳ Şirket endpoint'ine bağlama ve prompt'ları gerçek modelde ayarlama (endpoint dokümanı bekleniyor)
+- ✅ Orkestratör: ticket → varlık → kart eşleşmesi → soruşturma döngüsü (bütçeli) → rapor (`hibot/agent`)
+- ✅ Rapor formatı (Türkçe Markdown + JSON), çalışmayan sorgular kanıt sayılmıyor
+- ✅ CLI: `python -m hibot analyze|feedback`; FakeLLM demosu uçtan uca çalışıyor
+- ✅ Geri bildirim → kart promosyonu (Faz 3'ün çekirdeği)
 - ⬜ Değerlendirme seti: geçmiş ticket'lardan, kök nedeni Jira yorumlarında bilinen 30–50 vaka
 
 ### Faz 3: Öğrenme döngüsü
@@ -68,5 +70,5 @@ Yeni ticket ──► [1] Varlık çıkarımı (WO no, ülke→tenant, uygulama,
 ## Sıradaki iş (bir sonraki agent için)
 1. **Kullanıcı XML'leri indirince:** `python tools/jira_export/collect.py`, ardından `python tools/incidents/build.py`. Zenginleşen istatistikleri FINDINGS §7'ye işle.
 2. **DB erişimi gelince:** `HIBOT_DB_EU` / `HIBOT_DB_APAC` ortam değişkenlerini kullanıcı ayarlar (asla repoya yazılmaz). Önce `tenant_lookup` ve `wo_header` ile duman testi yap, sonra FINDINGS §8'deki varsayımları doğrula. Login'in `db_datareader`-only olduğunu teyit et.
-3. **Bağımsız işler (beklemeden yapılabilir):** codemap ↔ şema birleşimi (endpoint → SP → okunan/yazılan tablolar); Faz 2 orkestratör iskeleti (LLM istemcisi soyut olsun, endpoint dokümanı gelince doldurulur).
-4. **AI endpoint dokümanı gelince:** LLM istemcisi; embedding varsa BM25'in yanına ekle (D10).
+3. **AI endpoint dokümanı gelince:** `hibot/llm/client.py` içindeki `_FORMATS` tablosuna adaptör ekle, `--llm http` ile SM-1777386 üzerinde dene, prompt'ları ayarla. Embedding varsa BM25'in yanına ekle (D10).
+4. **Bağımsız işler (beklemeden yapılabilir):** (a) "DB izinden öğrenme" modülünün tasarımı ve kodu (D13), DB gelince çalışır; (b) en büyük ~30 grup için taslak kart üretimi (LLM gelince); (c) değerlendirme seti: elle seçilmiş 30–50 ticket ve beklenen sınıflandırma.
