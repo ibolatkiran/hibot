@@ -441,7 +441,8 @@ class CardTests(unittest.TestCase):
             self.skipTest("no shipped cards (knowledge/**/*.json is git-ignored)")
         for c in cs:
             self.assertEqual(c["status"], "draft")
-            self.assertIn("EXAMPLE", c["title"])
+            if c.get("created_by") != "batch_footprint":      # tools/learning drafts are real, unconfirmed candidates
+                self.assertIn("EXAMPLE", c["title"])
             reg = registry()
             for q in c["verification_queries"]:
                 self.assertIn(q["query_id"], reg.ids())

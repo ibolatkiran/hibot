@@ -408,6 +408,45 @@ Bütçe: varsayılan `max_queries` 10, LLM'e her zaman 2 sorgu ayrılıyor. SM-2
 - Ana veri setleri için ülke → tenant eşlemesi belirsiz.
 - LLM bazen `status_step_check` bulgusunu `wo_status_transition_check`'e atfediyor.
 
+## 13. Toplu DB izi öğrenmesi (`tools/learning` → `knowledge/learning/summary.md`), 2026-10-16
+
+Ayrıntılar: `knowledge/learning/summary.md`. Deterministik çalışır, LLM kullanılmadı. Kapsam sadece EU.
+
+**Huni:** 577 uygun ticket (kapanmış ve iş emri numarası olan)
+- 555'i EU'da bulundu
+- 186'sında (%34) ticket penceresinde iş emri değişmiş; 150'sinde statü değişmiş
+- **40'ında manuel DB düzeltmesi şüphesi yüksek**
+- 369'unda (%66) iş emri hiç değişmemiş (açıklama, konfigürasyon ya da çözüm başka yerde)
+
+Çalışma süresi 43 dk, 2.602 sorgu, 0 hata.
+
+**Taban oran kontrolü:** geçmiş satırı olmayan statü değişikliği ticket pencerelerinin içinde %10 (49/511), aynı iş emirlerinde pencere dışında %2 (82/4.322). Yani sinyal gerçek, ama her işaret manuel düzeltme değil.
+
+**Gerçek ve tekrar eden kalıplar** (StatusStep izin vermiyor, developer elle zorluyor; ticket metinleriyle doğrulandı)
+
+| Kalıp | Ticket | Ticket'taki talep |
+|---|---|---|
+| T70 Egypt 2271 *Financed(Accounted)* → 2257 *Transfer* | 6 | "change Status to transfer W.O …" |
+| T68 South Africa 329 *No Proof or Money* → 314 *Cancelled* | 3 (SM-2139009, SM-2139002, SM-1840263) | "No proof of money, I cannot cancel" |
+| T70 Egypt 2271 → 2260 *Work in progress* | 2 | "change state to work in progress" |
+| T80 Bosnia 706 *Cancelled by Call Center* → 707 *New Application* | 2 | "change status to New application" |
+| T81 Azerbaycan 897 → 888 *Ləğv edildi* (iptal) | 2 | "cancel statüsüne geçirilmesi" |
+
+**Muhtemel gürültü** (job veya trigger davranışı)
+- T49 Romania 818 → 821: StatusStep izin veriyor ve değişiklikler zincir halinde (8 sn arayla).
+- T46 Poland 841 → 1892: hep aynı saniyede bir geri alma; pencere dışı oranı %32.
+
+İkisi için de taslak kart oluştu ama CAUTION işareti var. **İnsan incelemesinde reddedilmesi önerilir.**
+
+**Taslak kartlar:** `knowledge/cards/draft_footprint_*.json` (7 adet, status draft, güven ≤ 0,7). Her birinde `wo_locate`, `wo_status_timeline`, `wo_field_changes` ve `status_step_check` doğrulama sorguları var. Anahtar kelimeler zayıf, çünkü ticket başlıkları genel ("Sirius Job: …").
+
+**Ürün içgörüsü:** Bu kalıplar, eksik veya kısıtlı statü geçişleri yüzünden developer'ların tekrar tekrar yaptığı elle DB işlerini sayısal olarak gösteriyor. Ya iş birimiyle konuşulup StatusStep'e geçiş eklenmeli, ya da kontrollü bir "admin statü düzeltme" fonksiyonu sunulmalı.
+
+**Sınırlamalar**
+- Sadece EU kapsandı; iş emri başına en yeni 200 log satırı okundu.
+- Pencere payları sezgisel; takip edilmeyen tablolardaki düzeltmeler iz bırakmıyor.
+- Ticket'taki numara başka bir iş emrine ait olabilir.
+
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
 Önyüzün çağırdığı ama backend'de karşılığı olmayan **109 benzersiz çağrı** var, liste: `knowledge/codemap/trace_index.json` → `unmatched_frontend_calls`. Örnekler:

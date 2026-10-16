@@ -46,7 +46,9 @@ Yeni ticket ──► [1] Varlık çıkarımı (WO no, ülke→tenant, uygulama,
 - ✅ Birleşik bilgi grafı: codemap ↔ şema, ileri ve ters izleme, hata metni araması (`tools/graph`, `hibot/knowledge`, 12 test)
 - ⏳ Jira XML ile zenginleştirme (export gelince `tools/incidents/build.py` tekrar çalıştırılır)
 - ✅ Ön adım (`wo_locate` ile tenant çözümü), temel sorgu setleri, ticket penceresi izi (manuel DB düzeltmesi tespiti) — tek ticket için canlıda çalışıyor (FINDINGS §12)
-- ⬜ **DB izinden öğrenme, toplu çalıştırma** (D13): ticket penceresi analizini kapanmış ve iş emri olan tüm EU ticket'larına uygula → etiketli veri seti ("fiilen ne yapıldı") ve kart adayları.
+- ✅ **DB izinden öğrenme, toplu çalıştırma** (D13): 577 EU ticket → 40 manuel düzeltme, 7 taslak kart (`tools/learning`, FINDINGS §13)
+- ⬜ Taslak kartların insan incelemesi (onay veya red): T49 ve T46 için red öneriliyor
+- ⬜ APAC DB gelince toplu çalıştırmayı APAC için tekrarla
 - ⏳ **DB izinden öğrenme** (D13, orijinal madde): kapanmış ticket'lar için açılış–kapanış aralığında ilgili iş emri ve kayıtlarda ne değiştiğini çıkar (`Log.WorkOrderJsonLog`, `WorkOrderGpsInfo`, audit) → "fiilen yapılan çözüm" etiketi. Gerekenler: prod DB + XML'deki resolved tarihleri.
 - ⏳ Bilinen Sorun Kartları v1: en büyük ~30 tekrar eden grup için kod haritası, şema ve DB izi üzerinden taslak kart; developer bir kez ✅/❌ verir → `knowledge/cards/`. Jira yorumlarına **güvenilmez** (D13).
 
@@ -71,8 +73,8 @@ Yeni ticket ──► [1] Varlık çıkarımı (WO no, ülke→tenant, uygulama,
 
 ## Sıradaki iş (bir sonraki agent için)
 Durum: ArGPT ve EU prod (read-only) bağlı, canlı analiz çalışıyor (FINDINGS §11–12). APAC DB yok.
-1. **Kullanıcı onayı:** SM-2139009 teşhisi (tenant 68'de StatusStep 329 → 314 eksik) doğru mu? Doğruysa `python -m hibot feedback 20261016-191209-SM-2139009-08c0 --verdict correct` → **ilk gerçek kart**.
-2. **Tekrar tespiti:** benzer ZA ticket'larını bul ("cancel", "No Proof or Money", tenant 68) → aynı kök neden mi?
-3. **Toplu DB izi:** kapanmış ve iş emri olan EU ticket'larında ticket penceresi analizini toplu çalıştır (LLM'siz, deterministik), sonuçları `knowledge/learning/` altına yaz, manuel düzeltme kalıplarını grupla → kart adayları.
-4. Değerlendirme seti: 30–50 ticket ve beklenen sınıflandırma.
+1. **Kart incelemesi (kullanıcı veya ekip):** 7 taslak kart (FINDINGS §13). Onay ve red için bir CLI komutu gerekebilir (`hibot cards review`). SM-2139009 kalıbı toplu analizle 3 ticket'ta doğrulandı.
+2. **Kartların analizde kullanımı:** yeni bir ticket draft veya confirmed bir kartla eşleştiğinde kartın doğrulama sorguları otomatik çalışmalı → "bilinen sorun" kısa yolu. Canlı test: SM-2139002 ve SM-2126600.
+3. Değerlendirme seti: 30–50 ticket ve beklenen sınıflandırma (toplu sonuçlardan yarı otomatik).
+4. Faz 4 hazırlığı: yeni ticket alımı (API yok → bildirim e-postaları).
 4. **Bağımsız işler (beklemeden yapılabilir):** (a) "DB izinden öğrenme" modülünün tasarımı ve kodu (D13), DB gelince çalışır; (b) en büyük ~30 grup için taslak kart üretimi (LLM gelince); (c) değerlendirme seti: elle seçilmiş 30–50 ticket ve beklenen sınıflandırma.

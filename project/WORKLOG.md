@@ -40,6 +40,6 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
 18. **İlk canlı analiz** (SM-2122480) yanlış tenant ile erken pes etti. Koordinatör `wo_locate` şablonunu yazdı; WO'nun tenant 70 (Egypt) altında olduğunu buldu. → FINDINGS §11.
 19. Ön adım, prompt kuralları ve erken durma koruması (Sonnet, `325ec35`). Canlı çalıştırmada SM-2139009 "user_error" çıktı; koordinatör prod'da elle teşhis etti (FINDINGS §11): manuel DB düzeltmesi + eksik StatusStep 329 → 314.
 20. Şablon performansı, temel sorgu setleri, ticket penceresi izi, yüzeysel teşhis koruması (Sonnet). Koordinatör denetimi: 329 test geçiyor; SM-2139009 raporu manuel teşhisle birebir (`config` / 0,86). → FINDINGS §12.
-21. Toplu DB izi öğrenmesi başlatıldı (Sonnet, LLM yok). Kapanmış ve iş emri olan EU ticket'larında ticket penceresi analizi yapılıyor → `knowledge/learning/` (ham jsonl git dışında), örüntü madenciliği ve `draft_footprint_*` kart adayları.
+21. **Toplu DB izi öğrenmesi** (Sonnet, LLM yok): 577 ticket, 43 dk, 0 hata. 40 yüksek manuel düzeltme şüphesi, 7 taslak kart. Koordinatör denetimi: 341 test geçiyor; Egypt, ZA, BA ve AZ kalıpları ticket metinleriyle doğrulandı; T49 ve T46 gürültü. Alt agent `tests/test_agent.py`'de örnek kart testini `batch_footprint` kartları için gevşetti (kabul edildi). → FINDINGS §13.
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.

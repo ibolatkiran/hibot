@@ -1,0 +1,90 @@
+{
+  "id": "draft_footprint_t70_2271_to_2257",
+  "title": "Tenant 70 Egypt: status 2271 -> 2257 not configured; developers force it manually",
+  "symptom_signature": {
+    "problem_type": "data_correction",
+    "app": "crm",
+    "keywords": [
+      "change",
+      "status",
+      "transfer"
+    ],
+    "entity_requirements": [
+      "work_order_ids"
+    ]
+  },
+  "root_cause": "Tenant 70 Egypt: status 2271 (Financed(Accounted)) -> 2257 (Transfer) is NOT configured in Catalog.StatusStep, so the application refuses it; in 6 resolved tickets (2026-04-14 .. 2026-09-06) the work order status was nevertheless changed in Log.WorkOrderJsonLog without an Operation.WorkOrderGpsInfo history row, i.e. most likely forced directly in the database by a developer.",
+  "verification_queries": [
+    {
+      "query_id": "wo_locate",
+      "params_from_entities": {
+        "Number": "entities.work_order_ids[0]"
+      }
+    },
+    {
+      "query_id": "wo_status_timeline",
+      "params_from_entities": {
+        "TenantId": {
+          "const": 70
+        },
+        "WorkOrderId": "entities.work_order_ids[0]"
+      }
+    },
+    {
+      "query_id": "wo_field_changes",
+      "params_from_entities": {
+        "TenantId": {
+          "const": 70
+        },
+        "WorkOrderId": "entities.work_order_ids[0]"
+      }
+    },
+    {
+      "query_id": "status_step_check",
+      "params_from_entities": {
+        "TenantId": {
+          "const": 70
+        },
+        "FromStatusId": {
+          "const": 2271
+        },
+        "ToStatusId": {
+          "const": 2257
+        }
+      }
+    }
+  ],
+  "fix_steps": [
+    "Confirm in status_step_check that 2271 -> 2257 is missing for the tenant (IsRequestedTarget = 0).",
+    "Decide with the business whether the transition should be allowed; if yes add the Catalog.StatusStep row (config change), if it is a deliberate restriction explain it to the requester instead of forcing the status.",
+    "Check wo_field_changes: a status change without a history row and with UpdateUserId unchanged confirms the manual fix.",
+    "If the app refuses for another reason, investigate why the application flow fails (see wo_status_transition_check)."
+  ],
+  "code_locations": [],
+  "confidence": 0.7,
+  "status": "draft",
+  "evidence_tickets": [
+    "SM-2126600",
+    "SM-2070070",
+    "SM-2052928",
+    "SM-2041404",
+    "SM-2008157",
+    "SM-1966884"
+  ],
+  "created_by": "batch_footprint",
+  "created_at": "2026-10-16T20:03:48+00:00",
+  "history": [
+    {
+      "ts": "2026-10-16T20:03:48+00:00",
+      "event": "created",
+      "run_id": null,
+      "note": "batch_footprint: 6 tickets, 6 with UpdateUserId unchanged; heuristic, NOT confirmed"
+    },
+    {
+      "ts": "2026-10-16T20:04:15+00:00",
+      "event": "evidence_added",
+      "run_id": null,
+      "note": "batch_footprint: 6 tickets, 6 with UpdateUserId unchanged; heuristic, NOT confirmed"
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "id": "draft_footprint_t49_818_to_821",
+  "title": "Tenant 49 Romania: status 818 -> 821 changed without history row (suspected manual fix)",
+  "symptom_signature": {
+    "problem_type": "integration_failure",
+    "app": "portal",
+    "keywords": [
+      "document",
+      "missing"
+    ],
+    "entity_requirements": [
+      "work_order_ids"
+    ]
+  },
+  "root_cause": "Tenant 49 Romania: status 818 (Acceptat Service) -> 821 (Pachetul FI creat) is configured but in 6 resolved tickets (2025-11-19 .. 2026-09-01) the change was made without an Operation.WorkOrderGpsInfo history row (suspected direct DB update, a job or a trigger). Heuristic, not confirmed. CAUTION: in 5 of 6 tickets the change sits within 120 s of another status change on the same work order (looks like a job / trigger / automatic workflow rather than a manual fix).",
+  "verification_queries": [
+    {
+      "query_id": "wo_locate",
+      "params_from_entities": {
+        "Number": "entities.work_order_ids[0]"
+      }
+    },
+    {
+      "query_id": "wo_status_timeline",
+      "params_from_entities": {
+        "TenantId": {
+          "const": 49
+        },
+        "WorkOrderId": "entities.work_order_ids[0]"
+      }
+    },
+    {
+      "query_id": "wo_field_changes",
+      "params_from_entities": {
+        "TenantId": {
+          "const": 49
+        },
+        "WorkOrderId": "entities.work_order_ids[0]"
+      }
+    },
+    {
+      "query_id": "status_step_check",
+      "params_from_entities": {
+        "TenantId": {
+          "const": 49
+        },
+        "FromStatusId": {
+          "const": 818
+        },
+        "ToStatusId": {
+          "const": 821
+        }
+      }
+    }
+  ],
+  "fix_steps": [
+    "Run wo_field_changes and wo_status_timeline: is UpdateUserId unchanged and the history row missing?",
+    "Check wo_status_updater_log for a job/rule that writes this status without history (false positive of the heuristic).",
+    "If it is a manual correction, find out which application step failed for the user (code / data problem)."
+  ],
+  "code_locations": [],
+  "confidence": 0.5,
+  "status": "draft",
+  "evidence_tickets": [
+    "SM-2120348",
+    "SM-2061251",
+    "SM-1968097",
+    "SM-1881441",
+    "SM-1876722",
+    "SM-1817370"
+  ],
+  "created_by": "batch_footprint",
+  "created_at": "2026-10-16T20:03:48+00:00",
+  "history": [
+    {
+      "ts": "2026-10-16T20:03:48+00:00",
+      "event": "created",
+      "run_id": null,
+      "note": "batch_footprint: 6 tickets, 6 with UpdateUserId unchanged; heuristic, NOT confirmed"
+    },
+    {
+      "ts": "2026-10-16T20:04:15+00:00",
+      "event": "evidence_added",
+      "run_id": null,
+      "note": "batch_footprint: 6 tickets, 6 with UpdateUserId unchanged; heuristic, NOT confirmed"
+    }
+  ]
+}
