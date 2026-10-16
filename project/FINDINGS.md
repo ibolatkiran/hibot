@@ -580,6 +580,30 @@ Ticket veri setinde yoktu; Jira XML ile inbox'tan analiz edildi (`a6e3f06`). Run
 2. Sınıflandırmada **change_request / feature** ayrımı eksik. `user_error` / `explain_to_user` yanlış etiket.
 3. Yetki ve kapsam sorularında `Catalog.SiriusUserType` (+ çeviri) sorgusu gibi bir şablon gerekli.
 
+## 18. Yeni ticket SM-2169006 (Bangladeş, "Sirius is not showing Labour Charge"): HiBot vs. koordinatör, 2026-10-17
+
+Run `20261016-213420-SM-2169006-fa38`. HiBot sonucu `unknown` / 0,50. 5 sorgu çalıştırdı:
+- `wo_locate` ×2 → tenant 59 doğru bulundu
+- `wo_lines_totals` ×2 ve `wo_header`
+- Bulgular: 25947198'de "Installation" satırı var ama `LabourCost` 0; 25947184'te satır yok.
+- "Konfigürasyon mu kod mu, belirlenemiyor" dedi. 10 sorgu hakkının yarısıyla durdu.
+
+**Koordinatörün bulduğu (gerçek kök neden: ana veri, kategori düzeyinde)**
+1. `dbo.PricingWorkOrder`: `LabourCost` = iş emri satırlarında `Catalog.Material.Type = 1` olanların `Price` toplamı. Hesaplamada hata yok.
+2. Üç iş emrinde (25947198, 25947184, 25929623) **Type=1 (işçilik) satırı yok**. 25947198'de sadece TRNS (Type 3) ve Extra (Type 4) var; "Installation" arıza satırında `MaterialId` NULL.
+3. İşçilik listesi `GET api/Technician/GetSiriusLabours` → `dbo.GetSiriusLabours` ile geliyor. Zincir: `Catalog.ProductMaterial` → `ProductMaterialPriceGroup` (tenant) → `PriceListEntry` → ServiceShop ödeme grubu, WarrantyType, MaterialVat.
+4. SKU 7440000008 ve 7440000011 (SRAC split klima, hierarchy 121): `ProductTenant` kaydı T59'da var, ama **ProductMaterial (işçilik) = 0 ve ProductMaterialPriceGroup = 0, hiçbir tenant'ta**.
+5. **Hierarchy 121'de T59'da işçilik fiyat grubu olan hiçbir ürün yok** → kategorinin Bangladeş işçilik kurulumu hiç yapılmamış (muhtemelen yeni lansman).
+- **Çözüm:** T59 için hierarchy 121 ürünlerine işçilik malzemeleri ve fiyat grupları tanımlanmalı (HeadOffice `SetProductLabourPriceGroup`, SetupTenant `LabourPriceManagement` / `CreateLabourAndPrice`). Sonra iş emirlerine işçilik eklenip `PricingWorkOrder` yeniden çalışmalı.
+- `root_cause_type = master_data`, `resolution_action = master_data_change`.
+- Varsayım: T59, SP'de `ProductMaterial` yolunu kullanıyor (satır 167'deki tenant listesinde değil).
+
+**HiBot için çıkan dersler** (tur 2 adayları)
+1. **"Hesaplanan değer neden 0 / yanlış?" stratejisi:** kolonu yazan SP'yi (graf: writers) oku → hesaplama mantığından girdiyi bul → girdiyi sorgula. HiBot'ta kolon kökeni stratejisi yok.
+2. **Ana veri şablonları eksik:** ürünün işçilik ve fiyat grubu kurulumu (`product_labour_setup`: SKU → ProductMaterial / PriceGroup / tenant sayıları + aynı hierarchy'deki kardeş ürünler).
+3. "unknown, kod mu konfig mü bilinmiyor" diye durmadan önce **SP gövdesi okunmalı** (`read_source` SP için çalışıyor).
+4. Tekrar kalıbı: "Missing labour in Sirius <ülke>" (ör. SM-2088913 Bosna) → **kart adayı:** "Yeni SKU veya kategori için işçilik kurulumu yok → LabourCost 0".
+
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
 Önyüzün çağırdığı ama backend'de karşılığı olmayan **109 benzersiz çağrı** var, liste: `knowledge/codemap/trace_index.json` → `unmatched_frontend_calls`. Örnekler:
