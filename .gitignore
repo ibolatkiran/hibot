@@ -2,6 +2,7 @@
 docs/*.json
 docs/*.html
 docs/jira_export/raw/
+docs/jira_export/inbox/
 
 # Generated knowledge (regenerate with tools/*/build.py); READMEs, md reports and query templates stay tracked
 knowledge/**/*.json

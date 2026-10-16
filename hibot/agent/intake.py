@@ -5,6 +5,8 @@ so tools/incidents is put on sys.path only while importing them.
 """
 from __future__ import annotations
 
+import datetime as _dt
+import email.utils
 import json
 import re
 import sys
@@ -138,6 +140,61 @@ def from_text(text: str) -> dict:
     }
 
 
+@lru_cache(maxsize=1)
+def _jira_xml():
+    d = str(config.ROOT / "tools" / "incidents")
+    sys.path.insert(0, d)
+    try:
+        import jira_xml  # type: ignore
+    finally:
+        try:
+            sys.path.remove(d)
+        except ValueError:
+            pass
+    return jira_xml
+
+
+def inbox_dir():
+    """New tickets not in the dataset: single-issue Jira XML exports saved as <KEY>.xml (git-ignored, contains PII)."""
+    return config.ROOT / "docs" / "jira_export" / "inbox"
+
+
+def _jira_local(rfc: str) -> Optional[str]:
+    """Jira XML date ("Thu, 17 Sep 2026 08:58:00 +0300") -> dataset format "2026-09-17 08:58" in Jira local time."""
+    if not rfc:
+        return None
+    try:
+        d = email.utils.parsedate_to_datetime(rfc)
+    except (TypeError, ValueError, IndexError):
+        return None
+    if d.tzinfo is not None:
+        d = d.astimezone(_dt.timezone(_dt.timedelta(hours=3)))
+    return d.strftime("%Y-%m-%d %H:%M")
+
+
+def from_jira_xml(path, key: Optional[str] = None) -> dict:
+    """A ticket newer than the dataset, from a Jira XML export (one issue or a search export containing it)."""
+    issues = _jira_xml().parse_file(str(path))
+    issue = next((i for i in issues if not key or i["key"] == key), None)
+    if issue is None:
+        raise IntakeError("%s not found in %s" % (key or "an issue", path))
+    inc = from_text("%s\n%s" % (issue["summary"], issue["description"] or issue["summary"]))
+    extract, _ = _tools()
+    cc = ((issue["custom_fields"].get("Country Code") or [""])[0] or "").strip().upper()
+    if cc and not inc.get("country"):
+        inc["country"] = cc
+        inc["region_guess"] = region_guess(cc, inc.get("company_code"))
+    inc.update({
+        "source": "jira_xml", "key": issue["key"],
+        "comments": [{"author": None, "created": c["created"], "text": extract.scrub(c["text"] or "")[:400]}
+                     for c in issue["comments"][:6]],
+        "comments_note": "Jira comments are unverified (D13); do not treat as ground truth.",
+        "status": issue["status"], "created": _jira_local(issue["created"]),
+        "resolved": issue["resolved"] or None, "resolution": issue["resolution"] or None,
+    })
+    return inc
+
+
 def find_similar_for_text(incident: dict, top_k: int = 5) -> List[dict]:
     """BM25 (tools/incidents/similarity.py) of free text against all known tickets."""
     extract, sim = _tools()
@@ -178,17 +235,26 @@ def _add_user_codes(inc: dict) -> dict:
     return inc
 
 
-def build_incident(key: Optional[str] = None, text: Optional[str] = None) -> dict:
-    """Jira key -> precomputed record; free text -> fresh extraction + BM25 similarity.
-    key + text where the key is unknown: text is analysed as free text and the key is kept as a label."""
+def build_incident(key: Optional[str] = None, text: Optional[str] = None, xml_path=None) -> dict:
+    """Jira key -> precomputed record; a key newer than the dataset -> its Jira XML (xml_path or the inbox);
+    free text -> fresh extraction + BM25 similarity.
+    key + text where the key is unknown and has no XML: text is analysed as free text and the key is kept as a label."""
+    if xml_path:
+        inc = from_jira_xml(xml_path, key)
+        inc["similar"] = find_similar_for_text(inc)
+        return _add_user_codes(inc)
     if key:
         if not KEY_RE.match(key):
             raise IntakeError("bad Jira key %r" % key)
         try:
             return _add_user_codes(from_jira_key(key, extra_text=text or ""))
         except IntakeError:
+            inbox = inbox_dir() / ("%s.xml" % key)
+            if inbox.is_file():
+                return build_incident(key, xml_path=inbox)
             if not text:
-                raise
+                raise IntakeError("ticket %s is not in the dataset and has no Jira XML in %s "
+                                  "(download it, see docs/jira_export/README.md)" % (key, inbox_dir()))
     inc = from_text(text or "")
     inc["key"] = key
     inc["similar"] = find_similar_for_text(inc)

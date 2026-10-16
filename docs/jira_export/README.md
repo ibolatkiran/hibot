@@ -45,6 +45,13 @@ Doğru dosya `<?xml` veya `<rss` ile başlar. 200 ticket için ~50–80 MB norma
 python tools/incidents/build.py   # raw/*.xml dosyalarını otomatik bulur ve ticket'ları zenginleştirir
 ```
 
+## Yeni bir ticket'ı analiz etmek (veri setinde olmayan)
+1. Tarayıcıda (digiport oturumu açıkken) şu adresi aç: `https://digiport.arcelik.com/si/jira.issueviews:issue-xml/SM-XXXXXXX/SM-XXXXXXX.xml`
+2. Gelen dosyayı **"Farklı kaydet"** ile `docs/jira_export/inbox/SM-XXXXXXX.xml` olarak kaydet (metin olarak değil; `<rss` içermeli).
+3. `python -m hibot analyze SM-XXXXXXX --live`: ticket veri setinde yoksa XML otomatik olarak inbox'tan okunur. Başka bir yerdeki dosya için `--xml <yol>` kullanılabilir.
+
+`inbox/` git dışındadır (kişisel veri içerir).
+
 ## Notlar
 - `raw/` klasörü **git dışında**. Kişisel veri (isim, e-posta, müşteri bilgisi) içerir.
 - JQL parçalarını yeniden üretmek için: `python tools/jira_export/make_jql.py --chunk 200`. URL hata verirse (`414` / `400`) parça boyutunu küçült, örneğin `--chunk 100`.

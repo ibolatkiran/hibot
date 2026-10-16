@@ -24,12 +24,12 @@ def cmd_analyze(a) -> int:
     from hibot.agent.demo import build_demo_llm
     from hibot.llm.client import LLMError, client_from_env
 
-    if not a.key and not a.text:
+    if not a.key and not a.text and not a.xml:
         print("error: give a Jira key and/or --text", file=sys.stderr)
         return 2
     budget = config.Budget(max_steps=a.max_steps, max_queries=a.max_queries)
     try:
-        inc = intake.build_incident(a.key, a.text)
+        inc = intake.build_incident(a.key, a.text, xml_path=a.xml)
     except intake.IntakeError as e:
         print("error: %s" % e, file=sys.stderr)
         return 2
@@ -102,6 +102,8 @@ def main(argv=None) -> int:
     an = sub.add_parser("analyze", help="analyse a Jira ticket or free text")
     an.add_argument("key", nargs="?", help="Jira key, e.g. SM-1777386")
     an.add_argument("--text", help="free ticket text (or extra text for a key)")
+    an.add_argument("--xml", help="Jira XML export of a ticket newer than the dataset "
+                                  "(default: docs/jira_export/inbox/<KEY>.xml when the key is unknown)")
     an.add_argument("--region", choices=["EU", "APAC"], help="database region (default: guessed from the country)")
     an.add_argument("--live", action="store_true", help="really run queries (needs HIBOT_DB_<REGION>); default is dry-run")
     an.add_argument("--max-steps", type=int, default=config.Budget.max_steps)
