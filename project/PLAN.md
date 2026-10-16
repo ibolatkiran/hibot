@@ -33,9 +33,9 @@ Yeni ticket ──► [1] Varlık çıkarımı (WO no, ülke→tenant, uygulama,
 - ✅ Keşif: veri, 4 önyüz, backend, DB (bkz. FINDINGS.md)
 - ✅ Git repo + dokümantasyon iskeleti
 - ✅ Jira XML export talimatı ve JQL parçaları (`docs/jira_export/`)
-- ⏳ **Kullanıcı:** 19 parça XML export'u `docs/jira_export/raw/` altına koyacak
-- ⏳ **Kullanıcı:** read-only prod DB erişimi (EU + APAC)
-- ⏳ **Kullanıcı:** şirket AI endpoint'inin dokümanı (model, format, embedding var mı)
+- ✅ 19 parça Jira XML export'u alındı, 3.790/3.790 ticket zenginleşti
+- 🔄 Read-only prod DB: EU kullanıcısı hazır. `.env` doldurulup `python -m hibot.db.probe --region EU` çalıştırılacak. APAC bekleniyor.
+- 🔄 ArGPT adaptörü hazır (D15). `.env` doldurulup `python -m hibot.llm.probe` ile yanıt şekli doğrulanacak.
 
 ### Faz 1: Bilgi tabanı
 - ✅ Şema kataloğu: `tools/schema_catalog` → `knowledge/schema`
@@ -68,7 +68,8 @@ Yeni ticket ──► [1] Varlık çıkarımı (WO no, ülke→tenant, uygulama,
 - ⬜ Proaktif izleme: `SiriusInt.JobRunLog`, `Gateway.*` hataları, `ErpDocument.ErrorDescription`, `Log.DB_Errors` artışları
 
 ## Sıradaki iş (bir sonraki agent için)
-1. **Kullanıcı XML'leri indirince:** `python tools/jira_export/collect.py`, ardından `python tools/incidents/build.py`. Zenginleşen istatistikleri FINDINGS §7'ye işle.
-2. **DB erişimi gelince:** `HIBOT_DB_EU` / `HIBOT_DB_APAC` ortam değişkenlerini kullanıcı ayarlar (asla repoya yazılmaz). Önce `tenant_lookup` ve `wo_header` ile duman testi yap, sonra FINDINGS §8'deki varsayımları doğrula. Login'in `db_datareader`-only olduğunu teyit et.
-3. **AI endpoint dokümanı gelince:** `hibot/llm/client.py` içindeki `_FORMATS` tablosuna adaptör ekle, `--llm http` ile SM-1777386 üzerinde dene, prompt'ları ayarla. Embedding varsa BM25'in yanına ekle (D10).
+1. **Kullanıcı `.env`'i doldurunca** (`.env.example` şablonu; dosyayı ASLA okuma veya yazdırma):
+   - `python -m hibot.llm.probe`: yanıt şeklini gör. `_parse_argpt` gerekirse sadeleştir. JSON talimatına uyuluyor mu? Gerekirse maxTokens sınırını ayarla.
+   - `python -m hibot.db.probe --region EU`: login gerçekten read-only mı (yazma yetkisi varsa DUR ve kullanıcıya bildir)? `tenant_lookup` çalışıyor mu?
+2. İkisi de geçince: `python -m hibot analyze SM-1777386 --llm http --live`. İlk gerçek analizi değerlendir ve prompt'ları ayarla. Ardından FINDINGS §8'deki DB varsayımlarını doğrula.
 4. **Bağımsız işler (beklemeden yapılabilir):** (a) "DB izinden öğrenme" modülünün tasarımı ve kodu (D13), DB gelince çalışır; (b) en büyük ~30 grup için taslak kart üretimi (LLM gelince); (c) değerlendirme seti: elle seçilmiş 30–50 ticket ve beklenen sınıflandırma.

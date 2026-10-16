@@ -208,6 +208,19 @@ Ayrıntılar: `knowledge/incidents/README.md`, `stats.md`. Bu sonuçlar sadece m
 - ⚠️ Kaynak veride **açık metin şifreler** var (kullanıcılar ticket'a şifre yazmış). Scrubber bunları temizliyor.
 - Metin içindeki imza isimleri ("Thanks, X") tam temizlenmiyor.
 
+**Tam Jira zenginleştirmesi (2026-10-16, 19 parçanın hepsi)**
+
+| Ölçüt | Değer |
+|---|---|
+| Zenginleşen ticket | 3.790 / 3.790 |
+| Resolved tarihi olan | 3.573 |
+| Çözüm tipi | Done 3.044 · Won't Do 323 · Unresolved 217 · Insufficient Information 206 |
+| Ülke tespiti | %47,4 → **%99,2** (`Country Code` alanı sayesinde) |
+| Açıklaması 400 karakterden uzun | 541 (artık kesik değil, ortalama 235 karakter) |
+| Ticket başına yorum | 3,5 |
+| İş emri numarası olan | %15,3 |
+| Tekrar eden grup | 568 grup, 2.098 ticket |
+
 **Jira XML**
 - Ayrıştırıcı gerçek bir export'la doğrulandı: ilk 78 MB'lık chunk_01, 200 ticket, ortalama 4,8 yorum, resolution ve custom field'lar okundu.
 - `Country Code` custom field'ı ülke boşluğunu dolduruyor.

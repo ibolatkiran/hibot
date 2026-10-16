@@ -8,7 +8,8 @@ Environment (HttpChatClient.from_env / client_from_env("http")):
     HIBOT_LLM_URL          full endpoint URL                       (required)
     HIBOT_LLM_API_KEY      credential, never logged / put in errors (optional)
     HIBOT_LLM_MODEL        model / deployment name                 (optional, sent when set)
-    HIBOT_LLM_FORMAT       openai | anthropic | raw                (default openai)
+    HIBOT_LLM_FORMAT       openai | anthropic | raw | argpt        (default openai; company endpoint = argpt)
+    HIBOT_LLM_CLIENT_ID    ArGPT ClientId header (argpt only; secret, never logged)
     HIBOT_LLM_AUTH_HEADER  header name for the key                 (default: Authorization / x-api-key)
     HIBOT_LLM_AUTH_SCHEME  prefix put before the key               (default: "Bearer " for openai/raw, "" for anthropic)
     HIBOT_LLM_JSON_MODE    "1" adds response_format=json_object (openai format only, opt-in)
@@ -147,10 +148,60 @@ def _parse_raw(data: Any) -> str:
     raise LLMError("cannot find text in raw response; adapt hibot/llm/client.py::_parse_raw")
 
 
+def _flatten_argpt(messages, model, max_tokens, temperature, json_schema, env):
+    """Arçelik ArGPT text-completion: one prompt string, no chat roles, no tool calling.
+
+    POST https://argptapi.arcelik.com/api/public/text-completion
+    headers: ClientId, ApiKey (see HttpChatClient._headers)
+    """
+    labels = {"system": "TALİMATLAR", "user": "GİRDİ", "assistant": "ÖNCEKİ YANITIN"}
+    parts = ["### %s\n%s" % (labels.get(m["role"], m["role"].upper()), m["content"]) for m in messages]
+    parts.append("### YANIT (yalnızca geçerli JSON)\n")
+    return {
+        "completionSettings": {"maxTokens": max_tokens, "temperature": temperature, "topP": 1,
+                               "presencePenalty": 0, "frequencyPenalty": 0},
+        "prompt": "\n\n".join(parts),
+    }
+
+
+_TEXT_KEYS = ("completion", "text", "content", "result", "response", "output", "answer", "message", "data",
+              "choices", "value")
+
+
+def _parse_argpt(data: Any) -> str:
+    """Response shape is undocumented: find the completion text wherever it is (verified by `python -m hibot.llm.probe`)."""
+    def find(node: Any, depth: int = 0) -> Optional[str]:
+        if depth > 6:
+            return None
+        if isinstance(node, str):
+            return node
+        if isinstance(node, list):
+            for item in node:
+                hit = find(item, depth + 1)
+                if hit is not None:
+                    return hit
+        if isinstance(node, dict):
+            for k in _TEXT_KEYS:
+                for key in (k, k.capitalize()):
+                    if key in node:
+                        hit = find(node[key], depth + 1)
+                        if hit is not None:
+                            return hit
+        return None
+
+    if isinstance(data, dict) and data.get("isSuccess") is False:
+        raise LLMError("ArGPT returned isSuccess=false: %s" % str(data.get("message") or data.get("errors"))[:300])
+    text = find(data)
+    if text is None:
+        raise LLMError("cannot find completion text in ArGPT response; run `python -m hibot.llm.probe` and adapt _parse_argpt")
+    return text
+
+
 _FORMATS = {
     "openai": (_flatten_openai, _parse_openai, "Authorization", "Bearer "),
     "anthropic": (_flatten_anthropic, _parse_anthropic, "x-api-key", ""),
     "raw": (_flatten_raw, _parse_raw, "Authorization", "Bearer "),
+    "argpt": (_flatten_argpt, _parse_argpt, "ApiKey", ""),
 }
 
 Opener = Callable[[urllib.request.Request, float], Tuple[int, bytes]]
@@ -171,7 +222,8 @@ class HttpChatClient(LLMClient):
                  fmt: str = "openai", timeout: float = 120.0, retries: int = 2, backoff: float = 1.5,
                  auth_header: Optional[str] = None, auth_scheme: Optional[str] = None,
                  extra_headers: Optional[Mapping[str, str]] = None, opener: Optional[Opener] = None,
-                 sleep: Callable[[float], None] = time.sleep, env: Optional[Mapping[str, str]] = None):
+                 sleep: Callable[[float], None] = time.sleep, env: Optional[Mapping[str, str]] = None,
+                 client_id: Optional[str] = None):
         if fmt not in _FORMATS:
             raise LLMError("HIBOT_LLM_FORMAT must be one of %s" % ", ".join(sorted(_FORMATS)))
         if not url or not re.match(r"^https?://", url):
@@ -186,6 +238,11 @@ class HttpChatClient(LLMClient):
         self._extra = dict(extra_headers or {})
         if fmt == "anthropic":
             self._extra.setdefault("anthropic-version", "2023-06-01")
+        self._client_id = client_id or None
+        if fmt == "argpt":
+            if not (self._client_id and self._key):
+                raise LLMError("argpt format needs HIBOT_LLM_CLIENT_ID and HIBOT_LLM_API_KEY")
+            self._extra["ClientId"] = self._client_id
         self._opener = opener or _default_opener
         self._sleep = sleep
         self._env = dict(os.environ if env is None else env)
@@ -200,7 +257,7 @@ class HttpChatClient(LLMClient):
                    fmt=e.get("HIBOT_LLM_FORMAT", "openai").lower(),
                    timeout=float(e.get("HIBOT_LLM_TIMEOUT", "120")), retries=int(e.get("HIBOT_LLM_RETRIES", "2")),
                    auth_header=e.get("HIBOT_LLM_AUTH_HEADER"), auth_scheme=e.get("HIBOT_LLM_AUTH_SCHEME"),
-                   env=e, **kw)
+                   client_id=e.get("HIBOT_LLM_CLIENT_ID"), env=e, **kw)
 
     def __repr__(self) -> str:                    # never leak the key
         return "HttpChatClient(url=%r, fmt=%r, model=%r)" % (self.url, self.fmt, self.model)
@@ -213,8 +270,9 @@ class HttpChatClient(LLMClient):
         return h
 
     def _scrub(self, s: str) -> str:
-        if self._key:
-            s = s.replace(self._key, "***")
+        for secret in (self._key, self._client_id):
+            if secret:
+                s = s.replace(secret, "***")
         return s[:300]
 
     def complete(self, messages, *, json_schema=None, max_tokens=2000, temperature=0.0) -> str:

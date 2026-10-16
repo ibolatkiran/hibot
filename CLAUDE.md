@@ -40,7 +40,14 @@ python -m hibot analyze SM-1777386 --llm fake            # uçtan uca demo (LLM 
 python -m hibot analyze --text "..." [--region EU|APAC] [--live] [--llm http]
 python -m hibot feedback <run_id> --verdict correct|wrong|partial [--note "..."]
 ```
-`--live` için `HIBOT_DB_EU` / `HIBOT_DB_APAC`, `--llm http` için `HIBOT_LLM_*` ortam değişkenleri gerekir. Değişken yoksa sorgular dry-run çalışır ve rapor bunu açıkça belirtir.
+`--live` için `HIBOT_DB_EU` / `HIBOT_DB_APAC`, `--llm http` için `HIBOT_LLM_*` gerekir. Bunlar repo kökündeki **git dışı `.env`** dosyasından otomatik yüklenir (şablon: `.env.example`). Şirket LLM'i ArGPT (`HIBOT_LLM_FORMAT=argpt`). Değişken yoksa sorgular dry-run çalışır ve rapor bunu açıkça belirtir.
+
+Bağlantı testleri:
+```bash
+python -m hibot.llm.probe                 # ArGPT yanıt şekli + JSON uyumu
+python -m hibot.db.probe --region EU      # login read-only mı + tenant_lookup duman testi
+```
+**Agent'lar `.env` dosyasını asla okumaz veya içeriğini yazdırmaz** (D16).
 
 ## Bilgi tabanını yeniden üretme
 ```bash

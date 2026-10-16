@@ -70,6 +70,8 @@ def cmd_feedback(a) -> int:
 
 def main(argv=None) -> int:
     _utf8()
+    from hibot.envfile import load_env
+    load_env()                                               # secrets from git-ignored HiBot/.env
     p = argparse.ArgumentParser(prog="hibot", description="HiBot incident root-cause agent")
     sub = p.add_subparsers(dest="cmd", required=True)
     an = sub.add_parser("analyze", help="analyse a Jira ticket or free text")

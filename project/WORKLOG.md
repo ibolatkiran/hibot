@@ -26,5 +26,13 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
 12. Jira snippet'i kullanıcıda hata verdi: chunk 02–04 "XML değil" diye reddedildi. Sebep: Jira, `<rss`'ten önce ~500 karakterlik bir yorum bloğu yazıyor; kontrol ilk 300 bayta bakıyordu. Düzeltme: 16 KB'a bakılıyor, hata mesajına teşhis bilgisi eklendi (`d8f269c`). `collect.py`'da aynı düzeltme yapıldı.
 13. **Birleşik bilgi grafı** (Sonnet). Koordinatör denetimi: history zinciri, serbest metin araması ve hata metni araması doğru. → FINDINGS §9.
 14. **Faz 2 orkestratör iskeleti** (Sonnet). Koordinatör denetimi: 287 test geçiyor, demo uçtan uca çalışıyor, `read_source` 5/5 saldırıyı reddetti. → FINDINGS §10. `.gitignore`: `runs/` dışarıda; `knowledge/cards/*.json` ve `feedback/` git'te (öğrenilen bilgi).
+15. Kullanıcı 19 Jira XML parçasını düzeltilmiş snippet'le indirdi (collect: hepsi 200/200, son parça 190/190). `tools/incidents/build.py` → 3.790/3.790 zenginleşti, ülke tespiti %99,2. → FINDINGS §7.
+16. ArGPT endpoint bilgisi geldi (D15). Koordinatör yazdı:
+    - `argpt` adaptörü (`hibot/llm/client.py`)
+    - `.env` yükleyici (`hibot/envfile.py`, D16) ve `.env.example`
+    - `hibot/llm/probe.py`, `hibot/db/probe.py` (yetki kontrolü + `tenant_lookup` duman testi)
+    - `tests/test_argpt.py` (8 test)
+    - pyodbc 5.3.0 kuruldu; makinede ODBC Driver 18 for SQL Server var.
+17. EU DB kullanıcısı hazır (kullanıcı bildirdi). `.env` doldurulması bekleniyor.
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.
