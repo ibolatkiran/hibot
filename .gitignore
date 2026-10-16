@@ -7,6 +7,8 @@ docs/jira_export/raw/
 knowledge/**/*.json
 # ...except learned knowledge, which cannot be regenerated: known-issue cards (feedback/*.jsonl is tracked too)
 !knowledge/cards/*.json
+# ...and the evaluation set + scored results (no PII; checked by tests/test_eval.py)
+!knowledge/eval/*.json
 
 # Runtime
 logs/
