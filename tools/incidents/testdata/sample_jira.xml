@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="0.92">
+  <channel>
+    <title>Synthetic Jira export</title>
+    <item>
+      <title>[SM-9000001] Sirius Poland - Missing tenant for 859991715080</title>
+      <link>https://example.invalid/browse/SM-9000001</link>
+      <key id="1001">SM-9000001</key>
+      <summary>Sirius Poland - Missing tenant for 859991715080</summary>
+      <type id="3">Service Request</type>
+      <priority id="3">Normal</priority>
+      <status id="6">Closed</status>
+      <resolution id="1">Done</resolution>
+      <assignee username="agent1">Test Agent</assignee>
+      <reporter username="rep1">Jan Testowy</reporter>
+      <created>Mon, 5 Jan 2026 09:15:00 +0300</created>
+      <updated>Tue, 6 Jan 2026 10:00:00 +0300</updated>
+      <resolved>Tue, 6 Jan 2026 10:00:00 +0300</resolved>
+      <description>&lt;p&gt;Please add tenant for SKU &lt;b&gt;859991715080&lt;/b&gt; in Sirius Poland.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;WO: 22156961&lt;/li&gt;&lt;li&gt;Contact jan.testowy@example.com&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Password: Secret123&lt;/p&gt;</description>
+      <component>SIRIUS Portal</component>
+      <component>Master Data</component>
+      <labels>
+        <label>tenant</label>
+        <label>poland</label>
+      </labels>
+      <comments>
+        <comment id="5001" author="agent1" created="Mon, 5 Jan 2026 12:00:00 +0300">&lt;p&gt;Added via MM03 in SAP. Please retry.&lt;/p&gt;</comment>
+        <comment id="5002" author="rep1" created="Tue, 6 Jan 2026 09:00:00 +0300">&lt;p&gt;Works now, thanks. WO 22156961 closed.&lt;/p&gt;</comment>
+      </comments>
+      <customfields>
+        <customfield id="customfield_10010" key="x:select">
+          <customfieldname>Affected Country</customfieldname>
+          <customfieldvalues>
+            <customfieldvalue>Poland</customfieldvalue>
+          </customfieldvalues>
+        </customfield>
+        <customfield id="customfield_10011" key="x:multi">
+          <customfieldname>Root Cause Category</customfieldname>
+          <customfieldvalues>
+            <customfieldvalue>Missing master data</customfieldvalue>
+            <customfieldvalue>SAP MM03</customfieldvalue>
+          </customfieldvalues>
+        </customfield>
+      </customfields>
+    </item>
+    <item>
+      <key id="1002">SM-9000002</key>
+      <summary>Sirius Romania - cannot log in</summary>
+      <status id="1">Open</status>
+      <description>&lt;p&gt;Unauthorized error 401 after login.&lt;br/&gt;Second line&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

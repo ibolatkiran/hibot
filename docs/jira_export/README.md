@@ -18,7 +18,15 @@ Elimizdeki `kronik_sorunlar_son_1_yil_data.json` dosyasında açıklama 400 kara
 3. Sağ üstte **Export → XML** seç.
 4. Dosyayı `raw/chunk_01.xml` olarak kaydet. Diğer 18 parça için tekrarla.
 
+## ⚠️ Kaydetme tuzağı
+Tarayıcı XML'i ekranda gösterdiğinde **Ctrl+S "sadece metin" kaydedebilir**. O zaman dosyada `<item>` gibi etiketler olmaz ve ayrıştırıcı 0 kayıt okur. 2026-10-16'daki ikinci `chunk_01.xml` (18,9 MB) böyleydi. Doğru yöntemler:
+- URL'nin linkine sağ tıklayıp **"Bağlantıyı farklı kaydet"** seç, ya da
+- Issue Navigator'da **Export → XML** seç. Dosya doğrudan indirilir.
+
+Doğru dosya `<?xml` veya `<rss` ile başlar. 200 ticket için ~50–80 MB normaldir.
+
 ## Kontrol
+- Dosyanın formatını kontrol et: `python tools/incidents/build.py` her dosya için okunan item sayısını yazar. `XML parse error after 0 items` görürsen dosya yanlış kaydedilmiştir.
 - Her dosyada ~200 `<item>` olmalı. Son parça (chunk_19) daha küçük.
 - Toplamda 3.790 ticket bekleniyor. Erişim yetkisi olmayan ticket'lar eksik gelebilir; ayrıştırıcı bunları raporlar.
 - Yorumlar gelmiyorsa: Jira yöneticisi XML görünümünde yorumları kapatmış olabilir. O durumda bildir.

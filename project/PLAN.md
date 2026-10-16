@@ -40,7 +40,7 @@ Yeni ticket ──► [1] Varlık çıkarımı (WO no, ülke→tenant, uygulama,
 ### Faz 1: Bilgi tabanı
 - ✅ Şema kataloğu: `tools/schema_catalog` → `knowledge/schema`
 - ✅ Kod izlenebilirlik haritası: `tools/code_map` → `knowledge/codemap` (%92,8 önyüz→backend eşleşmesi)
-- 🔄 Incident ön işleme: varlık çıkarımı, yeni sınıflama, BM25 benzerlik, tekrar eden gruplar, Jira XML ayrıştırıcı (`tools/incidents`)
+- ✅ Incident ön işleme: varlık çıkarımı, yeni sınıflama, BM25 benzerlik, 566 tekrar eden grup, Jira XML ayrıştırıcı (`tools/incidents`, 16 test)
 - 🔄 Güvenli SQL katmanı + teşhis sorgu şablonları (`hibot/db`, `knowledge/queries`)
 - ⬜ codemap ↔ şema kataloğu birleşimi: endpoint → SP → SP'nin okuduğu/yazdığı tablolar (tek graf)
 - ⏳ Jira XML ile zenginleştirme (export gelince `tools/incidents/build.py` tekrar çalıştırılır)

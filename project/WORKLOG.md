@@ -14,8 +14,11 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
 5. `tools/jira_export/make_jql.py`: 3.790 key için 19 JQL parçası ve XML export URL'leri (~2,9 KB). Talimat: `docs/jira_export/README.md`.
 6. Git repo, `.gitignore`, CLAUDE.md, project/ dokümanları.
 
+7. **Incident ön işleme** (`tools/incidents`, Sonnet). Bulgular → FINDINGS §7. Koordinatör kontrolü: 16 test geçiyor, `stats.md`'de PII yok (eşleşenler SKU kodu).
+   - Kullanıcının ilk chunk_01.xml export'u (78 MB) doğruydu ve ayrıştırıcı onunla doğrulandı.
+   - İkinci kayıt (18,9 MB) tarayıcıdan düz metin olarak kaydedilmiş, etiketsiz ve ayrıştırılamıyor. Kullanıcıya bildirildi, talimata uyarı eklendi.
+
 **Devam eden (alt agent'lar, Sonnet)**
-- `tools/incidents`: varlık çıkarımı, yeni sınıflama, BM25 benzerlik ve grupları, Jira XML ayrıştırıcı
 - `hibot/db` + `knowledge/queries`: safe_sql doğrulayıcı, maskeleme, runner, 18+ teşhis şablonu, adversarial testler
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.

@@ -169,6 +169,51 @@ Teşhis sırası:
 2. Fonksiyonun döndürdüğü satır sayısı (join, tenant veya dil filtresi kayıp yaratıyor mu?)
 3. Önyüz slice'ı (dizi mi tek obje mi; iki kez dispatch ediliyor)
 
+## 7. Incident ön işleme sonuçları (`tools/incidents` → `knowledge/incidents`), 2026-10-16
+
+Ayrıntılar: `knowledge/incidents/README.md`, `stats.md`. Bu sonuçlar sadece mevcut dataset'e dayanıyor; Jira XML ile zenginleştirme henüz yapılmadı.
+
+**Yeni problem sınıflaması** (kural tabanlı, kesinlik ~%80)
+
+| Tür | Oran |
+|---|---|
+| master_data_request | %27,8 |
+| access_request | %15,3 |
+| functional_defect | %12,7 |
+| other | %12,7 |
+| data_correction | %11,2 |
+| integration_failure | %7,8 |
+| report_export | %6,9 |
+| performance_availability | %2,2 |
+| notification_failure | %2,0 |
+| how_to_question | %1,1 |
+| mobile_offline | %0,3 |
+
+→ Ticket'ların **%54'ü ana veri, yetki veya veri düzeltme talebi**, yani kod hatası değil. Kod hatası ve entegrasyon kaynaklı olanlar ~%25.
+
+**Varlık çıkarımı**
+
+| Varlık | Kapsama | Kesinlik |
+|---|---|---|
+| İş emri numarası | %14,4 | ~%100 (elle kontrol) |
+| Ülke | %47,4 | ~%100 (açıkça yazıldığında) |
+| Ekran tahmini | Sirius ticket'larının %14,7'si | top-1'de ~%40, sadece aday |
+
+**Tekrar eden gruplar** (BM25, edge 0,22 / merge 0,30)
+- 566 grup, 2.094 ticket'ı (%55) kapsıyor; en büyüğü 48 ticket. Elle bakılan 10 grubun 8'i temiz.
+- En büyükler: Türkçe "Sirius ürün ekleme" (48), Missing Tenant for SKU / PL (44), WO'ya parça eklenemiyor (39), Contact statü değiştirme (27), Portekiz'de Contact SKU kaydı (23), Rumence işçilik ve arıza kodu (23).
+
+**Gizlilik**
+- Ham metin saklanmıyor, sadece `text_clean` (placeholder'lı) tutuluyor. Kişiler takma ID'lerle temsil ediliyor.
+- ⚠️ Kaynak veride **açık metin şifreler** var (kullanıcılar ticket'a şifre yazmış). Scrubber bunları temizliyor.
+- Metin içindeki imza isimleri ("Thanks, X") tam temizlenmiyor.
+
+**Jira XML**
+- Ayrıştırıcı gerçek bir export'la doğrulandı: ilk 78 MB'lık chunk_01, 200 ticket, ortalama 4,8 yorum, resolution ve custom field'lar okundu.
+- `Country Code` custom field'ı ülke boşluğunu dolduruyor.
+- ~100 custom field'ın çoğu ITSM boilerplate ve filtreleniyor.
+- Not: tarayıcıdan "metin olarak" kaydedilen XML işe yaramaz (bkz. `docs/jira_export/README.md`).
+
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
 Önyüzün çağırdığı ama backend'de karşılığı olmayan **109 benzersiz çağrı** var, liste: `knowledge/codemap/trace_index.json` → `unmatched_frontend_calls`. Örnekler:
