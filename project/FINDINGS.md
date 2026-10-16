@@ -556,6 +556,30 @@ Karşılaştırma: `knowledge/eval/compare_baseline_vs_round1.md`. Test seti bir
   - 0,5–0,65 bandında sıkışan doğru cevaplar
   - gümüş etiket tavanı belirsiz
 
+## 17. Yeni ticket SM-2172385 (Fas, "Update the repair date field"): HiBot vs. koordinatör, 2026-10-17
+
+Ticket veri setinde yoktu; Jira XML ile inbox'tan analiz edildi (`a6e3f06`). Run `20261016-212936-SM-2172385-9e74`.
+
+**HiBot'un bulduğu** (`user_error` / `explain_to_user`, güven 0,45, 0 sorgu)
+- `SetRepairDate` endpoint'ini (`TechnicianController.cs:6413`) ve `dbo.SetRepairDate` SP'sini (`VerificationDate` güncellemesi + `Log.WorkOrderDateEditAction` audit) doğru buldu.
+- Sonuç: "süreç tasarımı, ürün backlog'una alın".
+- **Kaçırdığı:** bu özelliğin UI'da zaten var olduğu, ama yetkinin kodda sabit listelendiği.
+
+**Koordinatörün bulduğu (gerçek kök neden)**
+- Graf: `SetRepairDate`'i çağıran ekranlar CRM/Partner'da `src/views/WorkOrder/Summary.js`, Portal'da `src/views/Operation/JobControl`.
+- `SiriusServiceShopCallCenter/src/views/WorkOrder/Summary.js:73-90`: düzenleme butonu **kodun içine sabit yazılmış** `SYSTEM_CONFIG.Live.repairDateEditUserTypeIds = [1218, 1233]` ile sınırlı. Yorumda "EG: GFSM-7863" ve "**TODO: yeni ülkenin user type Id'leri eklenecek**" yazıyor.
+- DB (`Catalog.SiriusUserType`): 1218 = T70 Egypt BackOffice-HQ, **1233 = T76 Morocco BackOffice-HQ**. Morocco **920 Service partner** ve 921 Technician listede yok.
+- **Sonuç:** Fas'ta Repair Date'i sadece BackOffice-HQ düzeltebiliyor. Vakayı kapatan servis sağlayıcı (920) düzeltemiyor. Bu bir **yetki ve kapsam (change request)** konusu.
+- Seçenekler:
+  - (a) Kod değişikliği olmadan: Fas BackOffice-HQ kullanıcıları tarihi düzeltir.
+  - (b) İş birimi onaylarsa 920'yi listeye ekle (Partner `Summary.js`; CRM ve Portal'daki eşdeğerleri de kontrol edilmeli).
+  - (c) Kalıcı çözüm: sabit listeyi DB'ye veya tenant parametresine taşı ("her yeni ülke için kod değişikliği" TODO'su bunu gerektiriyor).
+
+**HiBot için çıkan dersler** (tur 2 adayları)
+1. Endpoint incelenirken **çağıran UI ekranları ve oradaki yetki koşulları** (user type, rol, tenant ve ortam config'i, TODO'lar) da okunmalı. "Özellik var mı, kim kullanabiliyor?" sorusu sorulmalı.
+2. Sınıflandırmada **change_request / feature** ayrımı eksik. `user_error` / `explain_to_user` yanlış etiket.
+3. Yetki ve kapsam sorularında `Catalog.SiriusUserType` (+ çeviri) sorgusu gibi bir şablon gerekli.
+
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
 Önyüzün çağırdığı ama backend'de karşılığı olmayan **109 benzersiz çağrı** var, liste: `knowledge/codemap/trace_index.json` → `unmatched_frontend_calls`. Örnekler:
