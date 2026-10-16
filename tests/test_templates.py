@@ -67,8 +67,14 @@ class TestLibrary(unittest.TestCase):
                 self.assertTrue(all(p.description for p in t.params))
                 self.assertTrue(t.next)
 
+    # Deliberate exceptions: their whole job is to DISCOVER the tenant. They must only match on a
+    # primary key / external id and return identifying columns (no PII, no business data).
+    CROSS_TENANT_LOCATORS = {"wo_locate"}
+
     def test_tenant_scoped_templates_require_tenant(self):
         for t in REG:
+            if t.id in self.CROSS_TENANT_LOCATORS:
+                continue
             reads_tenant_table = any((CAT.get(n) and CAT.get(n).has_tenant_id) for n in t.tables)
             if reads_tenant_table:
                 p = t.param("TenantId")

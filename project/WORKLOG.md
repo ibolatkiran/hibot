@@ -33,6 +33,11 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
     - `hibot/llm/probe.py`, `hibot/db/probe.py` (yetki kontrolü + `tenant_lookup` duman testi)
     - `tests/test_argpt.py` (8 test)
     - pyodbc 5.3.0 kuruldu; makinede ODBC Driver 18 for SQL Server var.
-17. EU DB kullanıcısı hazır (kullanıcı bildirdi). `.env` doldurulması bekleniyor.
+17. Kullanıcı `.env`'i doldurdu.
+    - ArGPT probu geçti.
+    - DB probu: önce `IM002` / `08001` hataları alındı (bağlantı dizesinde `Driver=` eksikti), normalleştirme ile çözüldü. Login read-only doğrulandı.
+    - Ek düzeltmeler: unittest altında `.env` yüklenmiyor (bir CLI testi `--live` ile prod'a gidebiliyordu); runner artık `pyodbc`'yi import etmiyor.
+18. **İlk canlı analiz** (SM-2122480) yanlış tenant ile erken pes etti. Koordinatör `wo_locate` şablonunu yazdı; WO'nun tenant 70 (Egypt) altında olduğunu buldu. → FINDINGS §11.
+19. Devam eden (Sonnet): deterministik `wo_locate` ön adımı, prompt kuralları, erken durma koruması, testler, SM-2122480 ve SM-2139009 ile canlı doğrulama.
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.

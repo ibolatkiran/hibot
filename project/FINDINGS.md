@@ -330,6 +330,29 @@ Ayrıntılar: `hibot/agent/README.md`, `hibot/llm/README.md`. Sahte LLM ve DB ol
 - Demo, ticket'ta yoksa yer tutucu ID'ler kullanıyor (`tenant_id=1`, WO 12345678).
 - Gerekli bir varlık eksikse kartın skoru yarıya düşüyor ve kart adaylardan çıkabiliyor.
 
+## 11. Canlı bağlantılar ve ilk gerçek analiz, 2026-10-16
+
+**ArGPT** (`python -m hibot.llm.probe`)
+- HTTP 200, 1,8 sn. Yanıt şekli `{"content": "<metin>", "message": "success"}`.
+- Türkçe "sadece JSON döndür" talimatına birebir uydu.
+
+**EU prod DB** (`python -m hibot.db.probe --region EU`)
+- Login `gfsm_readonly_usr`, DB `gfsm`. Sadece `db_datareader`; INSERT, UPDATE, DELETE, EXECUTE ve ALTER yetkilerinin hepsi 0. ✅
+- `tenant_lookup` 1,2 sn'de gerçek veri döndürdü.
+- `.env`'deki bağlantı dizesi `{ODBC Driver 18 …};Server=…` biçimindeydi (`Driver=` yazılmamış). `build_connection_string` artık bunu tolere ediyor.
+
+**İlk canlı analiz:** SM-2122480 ("WO 22197255 Sirius'ta Financed, Atlas'ta Pending Approval (HQ)"), run `20261016-184754-SM-2122480-132f`. LLM şu adımları izledi:
+1. `tenant_lookup(CountryCode=TR)` → tenant 86 "Central (Arçelik Hitachi)"
+2. `wo_header(TenantId=86, WO=22197255)` → 0 satır
+3. "unknown, 0,2" ile pes etti (6 sorgu hakkının 2'sini kullanarak)
+
+**Gerçek:** WO 22197255 **tenant 70 (Egypt)** altında (StatusId 2271). Koordinatör bunu yeni `wo_locate` şablonuyla buldu.
+
+**Dersler**
+- ⚠️ **Ticket'taki ülke, ticket'ı açanın ülkesi; iş emrinin tenant'ı değil.** Ülke kodu `tr` başka bir tenant'la da eşleşiyor. → Tenant her zaman iş emrinden öğrenilmeli.
+- Eski şablonlar `TenantId`'yi zorunlu tutuyordu, yani tenant bilinmeden iş emri bulunamıyordu. → Yeni **`wo_locate`** şablonu: birincil anahtar veya harici ID ile tüm tenant'larda arar. Tenant kuralının bilinçli tek istisnası; testte `CROSS_TENANT_LOCATORS` olarak işaretli.
+- LLM 0 satırı "bulunamadı" sonucu sayıp erken durdu. → Deterministik `wo_locate` ön adımı, prompt kuralları ve erken durma koruması eklenecek (alt agent'ta).
+
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
 Önyüzün çağırdığı ama backend'de karşılığı olmayan **109 benzersiz çağrı** var, liste: `knowledge/codemap/trace_index.json` → `unmatched_frontend_calls`. Örnekler:
