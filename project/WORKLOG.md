@@ -45,5 +45,6 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
 23. **Kart CLI'ı ve kartla analiz** (Sonnet). Egypt kartı onaylandı. SM-2139002 ve SM-2126600 canlıda doğru kartla eşleşti, doğrulama destekliyor. Koordinatör denetimi: 367 test geçiyor, Egypt raporu doğru. → FINDINGS §14.
 24. Değerlendirme seti (Sonnet, `1e2e705`): 40 test + 5 dev ticket, 382 test. Kullanıcı 12 belirsiz etiketin gerçek cevabını bilmiyor.
 25. **Baseline ölçümü** (koordinatör arka planda çalıştırdı, `tools/eval/run_eval.py --tag baseline_20261016 --llm http --live --split test`): kanıt toplama çok iyi (WO %95, tenant %100, bulgu %92); sınıflandırma %40 / %50, emin-yanlış %23. → FINDINGS §15.
+26. Kullanıcı onayıyla **iyileştirme turu 1** başlatıldı (Sonnet). Kapsam: iki eksenli sınıflandırma (`root_cause_type` + `resolution_action`), deterministik güven kalibrasyonu, yetki ve zaman penceresi temel sorgu setleri, "pencerede değişiklik yok ≠ kullanıcı hatası" kuralı. Hedef: emin-yanlış < %10, esnek isabet > %65. **Aşırı uyum kuralı:** geliştirme dev seti ve set dışı ticket'larla yapılır; test seti sadece en sonda bir kez çalıştırılır.
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.
