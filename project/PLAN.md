@@ -44,7 +44,8 @@ Yeni ticket ──► [1] Varlık çıkarımı (WO no, ülke→tenant, uygulama,
 - 🔄 Güvenli SQL katmanı + teşhis sorgu şablonları (`hibot/db`, `knowledge/queries`)
 - ⬜ codemap ↔ şema kataloğu birleşimi: endpoint → SP → SP'nin okuduğu/yazdığı tablolar (tek graf)
 - ⏳ Jira XML ile zenginleştirme (export gelince `tools/incidents/build.py` tekrar çalıştırılır)
-- ⏳ Bilinen Sorun Kartları v1: tekrar eden gruplardan LLM ile kart çıkarımı (Jira yorumları ve çözüm notları gerekli) → `knowledge/cards/`
+- ⏳ **DB izinden öğrenme** (D13): kapanmış ticket'lar için açılış–kapanış aralığında ilgili iş emri ve kayıtlarda ne değiştiğini çıkar (`Log.WorkOrderJsonLog`, `WorkOrderGpsInfo`, audit) → "fiilen yapılan çözüm" etiketi. Gerekenler: prod DB + XML'deki resolved tarihleri.
+- ⏳ Bilinen Sorun Kartları v1: en büyük ~30 tekrar eden grup için kod haritası, şema ve DB izi üzerinden taslak kart; developer bir kez ✅/❌ verir → `knowledge/cards/`. Jira yorumlarına **güvenilmez** (D13).
 
 ### Faz 2: MVP teşhis agent'ı
 - ⏳ LLM istemcisi (şirket endpoint'i), JSON çıktı doğrulama ve yeniden deneme

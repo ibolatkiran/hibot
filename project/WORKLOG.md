@@ -18,6 +18,9 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
    - Kullanıcının ilk chunk_01.xml export'u (78 MB) doğruydu ve ayrıştırıcı onunla doğrulandı.
    - İkinci kayıt (18,9 MB) tarayıcıdan düz metin olarak kaydedilmiş, etiketsiz ve ayrıştırılamıyor. Kullanıcıya bildirildi, talimata uyarı eklendi.
 
+8. Yeniden kaydedilen chunk_01.xml (24,6 MB, `<rss` ile başlıyor) doğrulandı: 200/200 ticket, 960 yorum, 198 resolved tarihi, zenginleştirme çalışıyor. Kullanıcıya diğer 18 parçayı aynı şekilde indirmesi söylendi.
+9. Ground truth araştırması: Jira yorumları zayıf. Git'te sadece 14 ticket'a commit referansı var, DB sqlproj'larının git geçmişi yok. → **D13** (DB izinden öğrenme + HiBot'un ürettiği kartlar + tek tık geri bildirim) ve **D14**.
+
 **Devam eden (alt agent'lar, Sonnet)**
 - `hibot/db` + `knowledge/queries`: safe_sql doğrulayıcı, maskeleme, runner, 18+ teşhis şablonu, adversarial testler
 
