@@ -88,8 +88,8 @@ SELECT ...
 | `wo_debug_log` | EU | dbo.WorkOrderDebugLog |
 | `mobile_api_trace` | EU | V2 mobile ops, API audit, offline queue |
 | `notifications_for_wo` | EU, APAC | SMS / e-mail queue rows of an order |
-| `outbound_queue_backlog` | EU, APAC | Gateway.Notification / PostErrorLog / Email2Case outbox |
-| `job_health` | EU, APAC | SiriusInt job runs and error log |
+| `outbound_queue_backlog` | EU, APAC | Gateway.Notification / PostErrorLog / Email2Case outbox (optional `FromDate`/`ToDate` = window around an old incident) |
+| `job_health` | EU, APAC | SiriusInt job runs and error log (optional `FromDate`/`ToDate`) |
 | `technician_appointment_context` | EU, APAC | appointment vs technician/shop off-work and capacity |
 | `product_sku_lookup` | EU, APAC | SKU exists? assigned to tenant? |
 | `tenant_lookup` | EU, APAC | tenant by country / name |
@@ -127,6 +127,7 @@ Rows / elapsed ms per template. Samples: WO 22811628 (tenant 68, ZA) and WO 2219
 | db_errors_list | ErrorProcedure=Update | 100 | 1134 |
 | outbound_queue_backlog | (defaults) | 4 | 5163 |
 | job_health | (defaults) | 1 | 550 |
+| job_health / outbound_queue_backlog / db_errors_recent | FromDate/ToDate = 48 h window 3-300 days ago (round 1) | 1-9 | 200-2300 (each) |
 
 ### Performance lesson (wo_field_changes timed out, fixed)
 `WITH lang AS (SELECT COALESCE(@LanguageId, (SELECT TOP 1 ... FROM Catalog.Tenant ...)) AS Id)` cross-joined to a

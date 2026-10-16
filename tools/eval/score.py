@@ -27,12 +27,35 @@ CONF_WRONG = 0.7          # wrong with confidence >= this is a "confidently wron
 HONEST_UNKNOWN_MAX = 0.5  # unknown with confidence < this is an "honest unknown"
 BUCKETS = [(0.0, 0.4), (0.4, 0.7), (0.7, 1.01)]
 RELIABLE = ("high", "medium")
+# Same table as hibot/agent/axes.py LEGACY_TO_AXES (kept inline: this module is stdlib only).  Used for reports/labels without axes.
+LEGACY_TO_AXES = {
+    "code_defect": ("code_defect", "code_change"), "master_data": ("master_data", "master_data_change"),
+    "access": ("access", "grant_access"), "data_correction": ("data_issue", "data_fix"),
+    "integration": ("integration", "escalate_other_system"), "config": ("config", "config_change"),
+    "user_error": ("user_error", "explain_to_user"), "unknown": ("unknown", "unknown"),
+}
 
 
 # ------------------------------------------------------------------ helpers
 
 def lenient_match(expected: str, got: str) -> bool:
     return expected == got or frozenset((expected, got)) in LENIENT_PAIRS
+
+
+def report_axes(rep: dict) -> tuple:
+    """(root_cause_type, resolution_action) of a report; old reports (legacy classification only) are mapped with LEGACY_TO_AXES."""
+    rct, ra = rep.get("root_cause_type"), rep.get("resolution_action")
+    if rct and ra:
+        return rct, ra
+    d_rct, d_ra = LEGACY_TO_AXES.get(rep.get("classification"), (None, None))
+    return rct or d_rct, ra or d_ra
+
+
+def expected_axes(item: dict) -> tuple:
+    rct, ra = item.get("expected_root_cause_type"), item.get("expected_resolution_action")
+    if rct and ra:
+        return rct, ra
+    return LEGACY_TO_AXES.get(item.get("expected_classification"), (None, None))
 
 
 def _int(v: Any) -> Optional[int]:
@@ -118,6 +141,14 @@ def score_ticket(item: dict, rec: dict) -> dict:
         "queries_total": len(rec.get("queries") or []), "queries_executed": sum(1 for q in rec.get("queries") or [] if q.get("executed")),
         "matched_card": rec.get("matched_card"),
     }
+    got_rct, got_ra = report_axes(rep) if has_report else (None, None)
+    exp_rct, exp_ra = expected_axes(item)
+    out.update({"expected_rct": exp_rct, "expected_ra": exp_ra, "got_rct": got_rct, "got_ra": got_ra,
+                "confidence_raw": rep.get("confidence_raw"), "caps": [c.get("reason") for c in rep.get("confidence_caps_applied") or []]})
+    out["rct_ok"] = bool(has_report and got_rct and got_rct == exp_rct)
+    out["ra_ok"] = bool(has_report and got_ra and got_ra == exp_ra)
+    out["both_ok"] = out["rct_ok"] and out["ra_ok"]
+    out["cw_rct"] = bool(has_report and got_rct != exp_rct and conf >= CONF_WRONG)
     out["exact"] = bool(has_report and got == exp)
     out["lenient"] = bool(has_report and got and lenient_match(exp, got))
     out["confidently_wrong"] = bool(has_report and got != exp and conf >= CONF_WRONG)
@@ -165,6 +196,10 @@ def summarize(rows: List[dict]) -> dict:
         "class_exact_acc_reliable": _rate(sum(r["exact"] for r in rel), len(rel)),
         "class_lenient_acc_reliable": _rate(sum(r["lenient"] for r in rel), len(rel)),
         "findings_hit_rate": _rate(sum(r["findings_hit"] for r in rows), ft), "findings_total": ft,
+        "rct_acc_reliable": _rate(sum(r["rct_ok"] for r in rel), len(rel)), "ra_acc_reliable": _rate(sum(r["ra_ok"] for r in rel), len(rel)),
+        "both_acc_reliable": _rate(sum(r["both_ok"] for r in rel), len(rel)),
+        "rct_acc_all": _rate(sum(r["rct_ok"] for r in rows), n), "both_acc_all": _rate(sum(r["both_ok"] for r in rows), n),
+        "cw_rct_rate_reliable": _rate(sum(r["cw_rct"] for r in rel), len(rel)), "cw_rct_n_reliable": sum(r["cw_rct"] for r in rel),
         "honest_unknown_rate": _rate(sum(r["honest_unknown"] for r in rows), n),
         "confidently_wrong_rate_reliable": _rate(sum(r["confidently_wrong"] for r in rel), len(rel)),
         "confidently_wrong_n_reliable": sum(r["confidently_wrong"] for r in rel),
@@ -175,13 +210,13 @@ def summarize(rows: List[dict]) -> dict:
     }
 
 
-def calibration(rows: List[dict]) -> List[dict]:
-    """Confidence buckets vs exact accuracy, on reliable labels only."""
+def calibration(rows: List[dict], field: str = "exact") -> List[dict]:
+    """Confidence buckets vs accuracy (`exact` = legacy label, `rct_ok` = root_cause_type), on reliable labels only."""
     out = []
     rel = [r for r in rows if r["reliable"] and r["got"]]
     for lo, hi in BUCKETS:
         b = [r for r in rel if lo <= r["confidence"] < hi]
-        out.append({"bucket": "%.1f-%.1f" % (lo, min(hi, 1.0)), "n": len(b), "accuracy": _rate(sum(r["exact"] for r in b), len(b)),
+        out.append({"bucket": "%.1f-%.1f" % (lo, min(hi, 1.0)), "n": len(b), "accuracy": _rate(sum(r[field] for r in b), len(b)),
                     "mean_confidence": _avg(r["confidence"] for r in b)})
     return out
 
@@ -191,10 +226,13 @@ def aggregate(rows: List[dict]) -> dict:
     for r in rows:
         by_stratum[r["stratum"]].append(r)
     confusion: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    confusion_rct: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
     for r in rows:
         if r["reliable"]:
             confusion[r["expected"]][str(r["got"])] += 1
-    return {"overall": summarize(rows), "calibration": calibration(rows),
+            confusion_rct[str(r["expected_rct"])][str(r["got_rct"])] += 1
+    return {"overall": summarize(rows), "calibration": calibration(rows), "calibration_rct": calibration(rows, "rct_ok"),
+            "confusion_rct_reliable": {k: dict(v) for k, v in sorted(confusion_rct.items())},
             "by_stratum": {k: summarize(v) for k, v in sorted(by_stratum.items())},
             "confusion_reliable": {k: dict(v) for k, v in sorted(confusion.items())}}
 
@@ -243,6 +281,11 @@ def render_markdown(res: dict, tag: str) -> str:
          "| classification exact, reliable labels | %s |" % _pct(o["class_exact_acc_reliable"]),
          "| classification lenient, reliable labels | %s |" % _pct(o["class_lenient_acc_reliable"]),
          "| classification exact / lenient, all labels | %s / %s |" % (_pct(o["class_exact_acc_all"]), _pct(o["class_lenient_acc_all"])),
+         "| **confidently wrong on root_cause_type** (conf >= %.1f, reliable labels) | **%s** (%d tickets) |" % (
+             CONF_WRONG, _pct(o["cw_rct_rate_reliable"]), o["cw_rct_n_reliable"]),
+         "| root_cause_type accuracy, reliable / all labels | %s / %s |" % (_pct(o["rct_acc_reliable"]), _pct(o["rct_acc_all"])),
+         "| resolution_action accuracy, reliable labels | %s |" % _pct(o["ra_acc_reliable"]),
+         "| both axes correct, reliable / all labels | %s / %s |" % (_pct(o["both_acc_reliable"]), _pct(o["both_acc_all"])),
          "| work-order resolution (n=%d) | %s |" % (o["wo_n"], _pct(o["wo_resolution_acc"])),
          "| tenant resolution (n=%d) | %s |" % (o["tenant_n"], _pct(o["tenant_resolution_acc"])),
          "| expected_findings hit rate (%d checks) | %s |" % (o["findings_total"], _pct(o["findings_hit_rate"])),
@@ -252,22 +295,33 @@ def render_markdown(res: dict, tag: str) -> str:
          "## Calibration (reliable labels)", "", "| confidence | n | accuracy | mean confidence |", "|---|---:|---:|---:|"]
     for b in res["calibration"]:
         L.append("| %s | %d | %s | %s |" % (b["bucket"], b["n"], _pct(b["accuracy"]), b["mean_confidence"] if b["mean_confidence"] is not None else "n/a"))
+    L += ["", "## Calibration on root_cause_type (reliable labels)", "", "| confidence | n | accuracy | mean confidence |", "|---|---:|---:|---:|"]
+    for b in res.get("calibration_rct") or []:
+        L.append("| %s | %d | %s | %s |" % (b["bucket"], b["n"], _pct(b["accuracy"]), b["mean_confidence"] if b["mean_confidence"] is not None else "n/a"))
     L += ["", "## Per stratum", "",
-          "| stratum | n | exact (rel.) | lenient (rel.) | tenant | findings | conf. wrong | honest unk. | avg s | avg q |",
-          "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
+          "| stratum | n | exact (rel.) | lenient (rel.) | root cause (rel.) | both axes (rel.) | tenant | findings | conf. wrong (legacy / rct) | honest unk. | avg s | avg q |",
+          "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for k, s in res["by_stratum"].items():
-        L.append("| %s | %d | %s | %s | %s | %s | %d | %s | %s | %s |" % (
-            k, s["n"], _pct(s["class_exact_acc_reliable"]), _pct(s["class_lenient_acc_reliable"]), _pct(s["tenant_resolution_acc"]),
-            _pct(s["findings_hit_rate"]), s["confidently_wrong_n_reliable"], _pct(s["honest_unknown_rate"]),
+        L.append("| %s | %d | %s | %s | %s | %s | %s | %s | %d / %d | %s | %s | %s |" % (
+            k, s["n"], _pct(s["class_exact_acc_reliable"]), _pct(s["class_lenient_acc_reliable"]), _pct(s["rct_acc_reliable"]),
+            _pct(s["both_acc_reliable"]), _pct(s["tenant_resolution_acc"]),
+            _pct(s["findings_hit_rate"]), s["confidently_wrong_n_reliable"], s["cw_rct_n_reliable"], _pct(s["honest_unknown_rate"]),
             s["avg_elapsed_s"], s["avg_queries_total"]))
     L += ["", "## Confusion (reliable labels; expected -> got)", ""]
     for e, g in res["confusion_reliable"].items():
         L.append("- %s: %s" % (e, ", ".join("%s=%d" % kv for kv in sorted(g.items()))))
-    L += ["", "## Per ticket", "", "| key | stratum | label | expected | got | conf | findings | tenant | s | q |", "|---|---|---|---|---|---:|---:|---|---:|---:|"]
+    L += ["", "## Confusion on root_cause_type (reliable labels; expected -> got)", ""]
+    for e, g in (res.get("confusion_rct_reliable") or {}).items():
+        L.append("- %s: %s" % (e, ", ".join("%s=%d" % kv for kv in sorted(g.items()))))
+    L += ["", "## Per ticket", "", "| key | stratum | label | expected | got | axes expected -> got | conf (raw) | findings | tenant | s | q |",
+          "|---|---|---|---|---|---|---:|---:|---|---:|---:|"]
     for r in res["tickets"]:
         flag = " **CW**" if r["confidently_wrong"] and r["reliable"] else ""
-        L.append("| %s | %s | %s | %s | %s%s | %.2f | %d/%d | %s | %s | %d |" % (
-            r["key"], r["stratum"], r["label_confidence"], r["expected"], r["got"], flag, r["confidence"], r["findings_hit"],
+        raw = "" if r.get("confidence_raw") is None else " (%.2f)" % r["confidence_raw"]
+        axf = " **CW-rct**" if r["cw_rct"] and r["reliable"] else ""
+        L.append("| %s | %s | %s | %s | %s%s | %s/%s -> %s/%s%s | %.2f%s | %d/%d | %s | %s | %d |" % (
+            r["key"], r["stratum"], r["label_confidence"], r["expected"], r["got"], flag, r["expected_rct"], r["expected_ra"],
+            r["got_rct"], r["got_ra"], axf, r["confidence"], raw, r["findings_hit"],
             r["findings_total"], ("ok" if r["tenant_ok"] else "miss") if r["tenant_applicable"] else "-",
             r["elapsed_s"] if r["elapsed_s"] is not None else "-", r["queries_total"]))
     if res["missing_keys"]:
@@ -291,9 +345,10 @@ def main(argv=None) -> int:
     (out / ("results_%s.json" % a.tag)).write_text(json.dumps(res, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     (out / ("results_%s.md" % a.tag)).write_text(render_markdown(res, a.tag), encoding="utf-8")
     o = res["overall"]
-    print("scored %d tickets | exact(rel) %s | lenient(rel) %s | confidently wrong %s | honest unknown %s -> %s" % (
+    print("scored %d tickets | exact(rel) %s | lenient(rel) %s | confidently wrong %s (rct %s) | rct acc %s | both axes %s | honest unknown %s -> %s" % (
         o["n"], _pct(o["class_exact_acc_reliable"]), _pct(o["class_lenient_acc_reliable"]),
-        _pct(o["confidently_wrong_rate_reliable"]), _pct(o["honest_unknown_rate"]), out / ("results_%s.md" % a.tag)))
+        _pct(o["confidently_wrong_rate_reliable"]), _pct(o["cw_rct_rate_reliable"]), _pct(o["rct_acc_reliable"]), _pct(o["both_acc_reliable"]),
+        _pct(o["honest_unknown_rate"]), out / ("results_%s.md" % a.tag)))
     return 0
 
 

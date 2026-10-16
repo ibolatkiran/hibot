@@ -85,6 +85,12 @@
       "event": "state_signature_added",
       "run_id": null,
       "note": "migration: tenant/from/to taken from status_step_check constants"
+    },
+    {
+      "ts": "2026-10-16T20:44:31+00:00",
+      "event": "axes_added",
+      "run_id": null,
+      "note": "migration: root_cause_type=config, resolution_action=data_fix"
     }
   ],
   "state_signature": {
@@ -98,5 +104,7 @@
       "progre"
     ],
     "transition_configured": false
-  }
+  },
+  "root_cause_type": "config",
+  "resolution_action": "data_fix"
 }

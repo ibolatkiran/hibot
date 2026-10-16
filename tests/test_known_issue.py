@@ -312,6 +312,23 @@ class VerificationAndPipelineTests(unittest.TestCase):
         self.assertEqual(run["known_issue"]["verdict"], "supports")
         self.assertNotIn("SÜREÇ İHLALİ", run["report"]["root_cause"])
 
+    def test_state_only_match_is_hypothesis_not_adopted(self):
+        """Round 1: ticket never mentions the card's target action (e.g. an Atlas mismatch report) -> verdict inconclusive, no adoption."""
+        run, _, _ = self._run(egypt_card(status="confirmed"), inc=egypt_inc(summary="Status differs in Atlas", desc="WO shows pending there"))
+        self.assertEqual(run["known_issue"]["verdict"], "inconclusive")
+        rep = run["report"]
+        self.assertEqual(rep["classification"], "config")                  # LLM answer kept, card not forced
+        self.assertNotIn("SÜREÇ İHLALİ", rep["root_cause"])
+        self.assertIn("HİPOTEZDİR", " ".join(run["known_issue"]["details"]))
+
+    def test_confirmed_card_axes_and_calibration_in_report(self):
+        run, _, _ = self._run(egypt_card(status="confirmed", root_cause_type="user_error", resolution_action="explain_to_user"))
+        rep = run["report"]
+        self.assertEqual((rep["root_cause_type"], rep["resolution_action"], rep["classification"]), ("user_error", "explain_to_user", "user_error"))
+        self.assertIn("confidence_caps_applied", rep)
+        self.assertEqual(rep["confidence_raw"], 0.6)                       # the LLM said 0.6; the supported confirmed card lifts it
+        self.assertGreaterEqual(rep["confidence"], 0.85)
+
     def test_rejected_card_not_used_in_pipeline(self):
         run, log, _ = self._run(egypt_card(status="rejected"))
         self.assertIsNone(run["known_issue"])

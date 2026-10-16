@@ -122,7 +122,8 @@ def record_feedback(run_id: str, verdict: str, note: str = "", *, runs_base: Opt
                 cardmod.save_card(card, cards_dir)
                 actions.append("card %s created (%s)" % (card["id"], card["status"]))
     entry = {"ts": cardmod.now(), "run_id": run_id, "ticket": ticket, "verdict": verdict, "note": note[:1000],
-             "classification": rep.get("classification"), "confidence": rep.get("confidence"),
+             "classification": rep.get("classification"), "root_cause_type": rep.get("root_cause_type"),
+             "resolution_action": rep.get("resolution_action"), "confidence": rep.get("confidence"),
              "mode": run.get("mode"), "executed_queries": rep.get("executed_queries"), "card_actions": actions}
     fdir = feedback_base or config.feedback_dir()
     fdir.mkdir(parents=True, exist_ok=True)

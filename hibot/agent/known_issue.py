@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
 
+from . import axes
 from . import cards as cardmod
 from . import playbooks, ticket_window
 from .executor import LIVE, Executor
@@ -195,6 +196,12 @@ def analyze(inc: dict, ex: Executor, pf: dict, bl: dict, all_cards: List[dict]) 
         card = top["card"]
         results = run_verification(card, inc, ex, pf)
         ev = evaluate(card, results, bl.get("ticket_window"))
+        if ev["verdict"] == "supports" and not top["state"]["words_hit"]:
+            # Matched on STATE only (tenant + status): the ticket never asks for the card's target action (e.g. it is an Atlas
+            # mismatch report), so the card's claim says nothing about THIS ticket -> hypothesis only, never adopted.
+            ev = dict(ev, verdict="inconclusive", label=VERDICT_TR["inconclusive"], manual_force=False,
+                      details=ev["details"] + ["Kart yalnızca durum (tenant + statü) ile eşleşti; ticket metni kartın hedef eylemini anmıyor: "
+                                               "kart bu ticket için sadece HİPOTEZDİR, benimsenmez."])
         ka = {"match": top, "matches": matches, "card": card, "results": results, "evaluation": ev}
         ka["summary"] = summary(ka)
         ka["section"] = section_text(ka)
@@ -220,6 +227,9 @@ def section_text(ka: dict) -> str:
          "Kök neden (kart): " + c["root_cause"]]
     if c.get("classification"):
         L.append("Sınıflandırma (kart): " + c["classification"])
+    crct, cra = cardmod.card_axes(c)
+    if crct or cra:
+        L.append("Kök neden türü / yapılması gereken (kart): %s / %s" % (crct, cra))
     L.append("Çözüm adımları (kart):")
     L += ["  %d. %s" % (i, s) for i, s in enumerate(c.get("fix_steps") or [], 1)]
     L.append("Kartın doğrulama sorguları:")
@@ -259,8 +269,13 @@ def apply_to_report(rep: dict, ka: dict, executed_queries: int = 1) -> dict:
         card_steps = list(c.get("fix_steps") or [])
         extra = [LLM_ADD + s for s in rep.get("fix_steps") or [] if not _dup(s, card_steps) and not s.startswith(LLM_ADD)]
         rep["fix_steps"] = card_steps + extra
-        if c.get("classification"):
-            rep["classification"] = c["classification"]
+        crct, cra = cardmod.card_axes(c)
+        if crct and cra:
+            rep["root_cause_type"], rep["resolution_action"] = crct, cra
+            rep.pop("classification", None)
+            axes.normalize(rep)                     # derives the legacy label from the axes
+            if c.get("classification"):
+                rep["classification"] = c["classification"]      # an explicit reviewed card label wins
         llm_rc = (rep.get("root_cause") or "").strip()
         rc = c["root_cause"]
         if ev["manual_force"]:

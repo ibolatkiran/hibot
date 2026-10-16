@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+from .axes import ACTION_TR, ROOT_TR
+
 CLASS_TR = {
     "code_defect": "Kod hatası (code_defect)",
     "master_data": "Ana veri eksikliği/hatası (master_data)",
@@ -64,7 +66,13 @@ def render_markdown(run: Dict[str, Any]) -> str:
     L.append("## Özet")
     L.append(rep.get("summary", ""))
     L.append("")
-    L.append("**Sınıflandırma:** %s" % CLASS_TR.get(rep.get("classification"), rep.get("classification")))
+    if rep.get("root_cause_type") or rep.get("resolution_action"):
+        L.append("**Kök neden türü:** %s (`%s`)" % (ROOT_TR.get(rep.get("root_cause_type"), rep.get("root_cause_type")), rep.get("root_cause_type")))
+        L.append("")
+        L.append("**Yapılması gereken:** %s (`%s`)" % (ACTION_TR.get(rep.get("resolution_action"), rep.get("resolution_action")),
+                                                      rep.get("resolution_action")))
+        L.append("")
+    L.append("**Sınıflandırma (eski tek eksen, türetilmiş):** %s" % CLASS_TR.get(rep.get("classification"), rep.get("classification")))
     mcd = rep.get("matched_card")
     if mcd:
         L.append("")
@@ -136,6 +144,10 @@ def render_markdown(run: Dict[str, Any]) -> str:
     if rep.get("confidence_note"):
         L.append("")
         L.append("_%s_" % rep["confidence_note"])
+    if rep.get("confidence_caps_applied"):
+        L.append("")
+        L.append("_Ham güven (LLM): %.2f; uygulanan sınırlar: %s_" % (
+            float(rep.get("confidence_raw", 0)), ", ".join("%s (<= %.2f)" % (c["reason"], c["cap"]) for c in rep["confidence_caps_applied"])))
     L.append("")
     L.append("## Benzer vakalar")
     sim = inc.get("similar") or []

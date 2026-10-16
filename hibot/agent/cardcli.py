@@ -49,6 +49,8 @@ def format_card(c: dict) -> str:
          "Başlık: " + c["title"]]
     if c.get("classification"):
         L.append("Sınıflandırma: " + c["classification"])
+    if c.get("root_cause_type") or c.get("resolution_action"):
+        L.append("Kök neden türü / yapılması gereken: %s / %s" % (c.get("root_cause_type"), c.get("resolution_action")))
     L.append("Belirti imzası: problem_type=%s app=%s anahtar kelimeler=%s gerekli varlıklar=%s" % (
         sig.get("problem_type"), sig.get("app"), ", ".join(sig.get("keywords") or []) or "-", ", ".join(sig.get("entity_requirements") or []) or "-"))
     ss = c.get("state_signature")

@@ -76,7 +76,7 @@ Yeni ticket ──► [1] Varlık çıkarımı (WO no, ülke→tenant, uygulama,
 
 | Hedef | Durum |
 |---|---|
-| Analiz + kanıt sorguları | 🟢 Ölçüldü (FINDINGS §15): kanıt toplama %92–100; **sınıflandırma %40–50, emin-yanlış %23** |
+| Analiz + kanıt sorguları | 🟢 Tur 1 (FINDINGS §16): kanıt %90–100; sınıflandırma %53, kök neden türü %57; **emin-yanlış %23 → %3** |
 | "Sorun tam olarak nerede" | 🟡 DB kaynaklı vakalarda iyi; kod hatası vakaları canlıda hiç denenmedi |
 | Çözüm yolu | 🟡 Ana veri ve yetki (%43) canlıda denenmedi |
 | Öğrenme | 🟡 Mekanizma hazır; geri bildirim sadece CLI'dan |

@@ -5,8 +5,11 @@ from typing import Any, Dict, List
 
 from hibot.llm.jsonio import validate_schema
 
-CLASSIFICATIONS = ("code_defect", "master_data", "access", "data_correction", "integration", "config",
-                   "user_error", "unknown")
+from . import axes
+
+CLASSIFICATIONS = axes.LEGACY
+ROOT_CAUSE_TYPES = axes.ROOT_CAUSE_TYPES
+RESOLUTION_ACTIONS = axes.RESOLUTION_ACTIONS
 EVIDENCE_TYPES = ("query", "code", "similar_case", "card")
 ACTIONS = ("run_query", "run_sql", "inspect_code", "read_source", "final_report")
 CODE_KINDS = ("endpoint", "screen", "db_object", "error_text", "text")
@@ -16,10 +19,12 @@ _REGION = {"type": "string", "enum": ["EU", "APAC"]}
 
 REPORT_SCHEMA: Dict[str, Any] = {
     "type": "object",
-    "required": ["summary", "classification", "root_cause", "confidence", "evidence", "fix_steps"],
+    "required": ["summary", "root_cause", "confidence", "evidence", "fix_steps"],      # + axes OR legacy classification
     "properties": {
         "summary": {"type": "string", "minLength": 3, "maxLength": 1500},
-        "classification": {"type": "string", "enum": list(CLASSIFICATIONS)},
+        "root_cause_type": {"type": "string", "enum": list(ROOT_CAUSE_TYPES)},
+        "resolution_action": {"type": "string", "enum": list(RESOLUTION_ACTIONS)},
+        "classification": {"type": "string", "enum": list(CLASSIFICATIONS)},          # legacy; derived from the axes when both exist
         "root_cause": {"type": "string", "minLength": 3, "maxLength": 3000},
         "confidence": {"type": "number", "minimum": 0, "maximum": 1},
         "evidence": {"type": "array", "maxItems": 20, "items": {
@@ -72,8 +77,12 @@ def validate_action(obj: Any, only_final: bool = False) -> List[str]:
         return ["the investigation budget is exhausted: answer with action=final_report only"]
     if act not in ACTION_SCHEMAS:
         return ["$.action: must be one of %s (got %r)" % (list(ACTIONS), act)]
-    return validate_schema(obj, ACTION_SCHEMAS[act])
+    errs = validate_schema(obj, ACTION_SCHEMAS[act])
+    if act == "final_report" and not errs and "classification" not in obj and not ("root_cause_type" in obj and "resolution_action" in obj):
+        errs.append("$.root_cause_type / $.resolution_action: both are required (legacy `classification` alone is also accepted)")
+    return errs
 
 
 def split_report(action: dict) -> dict:
-    return {k: v for k, v in action.items() if k != "action"}
+    """final_report action -> report dict; axes and legacy classification are made consistent (axes win)."""
+    return axes.normalize({k: v for k, v in action.items() if k != "action"})

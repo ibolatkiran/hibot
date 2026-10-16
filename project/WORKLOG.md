@@ -46,5 +46,6 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
 24. Değerlendirme seti (Sonnet, `1e2e705`): 40 test + 5 dev ticket, 382 test. Kullanıcı 12 belirsiz etiketin gerçek cevabını bilmiyor.
 25. **Baseline ölçümü** (koordinatör arka planda çalıştırdı, `tools/eval/run_eval.py --tag baseline_20261016 --llm http --live --split test`): kanıt toplama çok iyi (WO %95, tenant %100, bulgu %92); sınıflandırma %40 / %50, emin-yanlış %23. → FINDINGS §15.
 26. Kullanıcı onayıyla **iyileştirme turu 1** başlatıldı (Sonnet). Kapsam: iki eksenli sınıflandırma (`root_cause_type` + `resolution_action`), deterministik güven kalibrasyonu, yetki ve zaman penceresi temel sorgu setleri, "pencerede değişiklik yok ≠ kullanıcı hatası" kuralı. Hedef: emin-yanlış < %10, esnek isabet > %65. **Aşırı uyum kuralı:** geliştirme dev seti ve set dışı ticket'larla yapılır; test seti sadece en sonda bir kez çalıştırılır.
+27. **Tur 1 tamamlandı** (Sonnet, 22 dev canlı analiz + 1 test çalıştırması). Emin-yanlış %23 → %3 (hedef tuttu); esnek isabet %50 → %53 (hedef >%65 tutmadı); ana veri %80 → %40 geriledi. Koordinatör denetimi: 418 test geçiyor, puanlar bağımsız yeniden hesaplamayla tutuyor. → FINDINGS §16, D18, D19.
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.

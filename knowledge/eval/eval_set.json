@@ -12,7 +12,8 @@
    "config",
    "user_error",
    "unknown"
-  ]
+  ],
+  "axes_rules": "knowledge/eval/label_axes_rules.md"
  },
  "tickets": [
   {
@@ -48,7 +49,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "cancel blocked at 'no proof of money'; DB fix"
+   "note": "cancel blocked at 'no proof of money'; DB fix",
+   "expected_root_cause_type": "config",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8a"
   },
   {
    "key": "SM-2139002",
@@ -83,7 +87,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "same cancel request as sibling ticket"
+   "note": "same cancel request as sibling ticket",
+   "expected_root_cause_type": "config",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8a"
   },
   {
    "key": "SM-2126600",
@@ -115,7 +122,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "asks status Transfer on a financed WO; blocked by design"
+   "note": "asks status Transfer on a financed WO; blocked by design",
+   "expected_root_cause_type": "user_error",
+   "expected_resolution_action": "explain_to_user",
+   "axes_rule": "R3"
   },
   {
    "key": "SM-2122480",
@@ -148,7 +158,10 @@
     }
    ],
    "needs_human_review": true,
-   "note": "status differs between Sirius and Atlas"
+   "note": "status differs between Sirius and Atlas",
+   "expected_root_cause_type": "integration",
+   "expected_resolution_action": "escalate_other_system",
+   "axes_rule": "R5a"
   },
   {
    "key": "SM-1777386",
@@ -171,7 +184,10 @@
     }
    ],
    "needs_human_review": true,
-   "note": "WO history shows one record after reassignment (APAC)"
+   "note": "WO history shows one record after reassignment (APAC)",
+   "expected_root_cause_type": "code_defect",
+   "expected_resolution_action": "code_change",
+   "axes_rule": "R4"
   },
   {
    "key": "SM-2143299",
@@ -207,7 +223,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "asks to reject a WO; status forced in DB"
+   "note": "asks to reject a WO; status forced in DB",
+   "expected_root_cause_type": "config",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8a"
   },
   {
    "key": "SM-2132761",
@@ -242,7 +261,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "asks to cancel a WO; status forced in DB"
+   "note": "asks to cancel a WO; status forced in DB",
+   "expected_root_cause_type": "config",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8a"
   },
   {
    "key": "SM-2100037",
@@ -271,7 +293,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "asks to reject a WO that has an error; status forced in DB"
+   "note": "asks to reject a WO that has an error; status forced in DB",
+   "expected_root_cause_type": "data_issue",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8b"
   },
   {
    "key": "SM-1967154",
@@ -306,7 +331,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "asks to move WO back to New Application"
+   "note": "asks to move WO back to New Application",
+   "expected_root_cause_type": "config",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8a"
   },
   {
    "key": "SM-2070070",
@@ -338,7 +366,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "asks Transfer status for a financed WO; blocked by design"
+   "note": "asks Transfer status for a financed WO; blocked by design",
+   "expected_root_cause_type": "user_error",
+   "expected_resolution_action": "explain_to_user",
+   "axes_rule": "R3"
   },
   {
    "key": "SM-2142402",
@@ -365,7 +396,10 @@
     }
    ],
    "needs_human_review": true,
-   "note": "asks to reject a WO that was set up wrongly"
+   "note": "asks to reject a WO that was set up wrongly",
+   "expected_root_cause_type": "unknown",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8c"
   },
   {
    "key": "SM-2122464",
@@ -392,7 +426,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "asks status Exchange required"
+   "note": "asks status Exchange required",
+   "expected_root_cause_type": "unknown",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8c"
   },
   {
    "key": "SM-2010200",
@@ -421,7 +458,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "asks status Transfer for several WOs"
+   "note": "asks status Transfer for several WOs",
+   "expected_root_cause_type": "unknown",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8c"
   },
   {
    "key": "SM-2147977",
@@ -450,7 +490,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "asks status Beko Approved for several WOs"
+   "note": "asks status Beko Approved for several WOs",
+   "expected_root_cause_type": "unknown",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8c"
   },
   {
    "key": "SM-2137438",
@@ -477,7 +520,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "asks to correct a WO serial number"
+   "note": "asks to correct a WO serial number",
+   "expected_root_cause_type": "unknown",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8c"
   },
   {
    "key": "SM-2143981",
@@ -513,7 +559,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "alternate model cannot be picked in an exchange"
+   "note": "alternate model cannot be picked in an exchange",
+   "expected_root_cause_type": "master_data",
+   "expected_resolution_action": "master_data_change",
+   "axes_rule": "R1"
   },
   {
    "key": "SM-2112749",
@@ -541,7 +590,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "quoted error: material not available at warehouse on parts order"
+   "note": "quoted error: material not available at warehouse on parts order",
+   "expected_root_cause_type": "master_data",
+   "expected_resolution_action": "master_data_change",
+   "axes_rule": "R1"
   },
   {
    "key": "SM-2128512",
@@ -561,7 +613,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "search and create reported broken; support sees no problem"
+   "note": "search and create reported broken; support sees no problem",
+   "expected_root_cause_type": "user_error",
+   "expected_resolution_action": "explain_to_user",
+   "axes_rule": "R3"
   },
   {
    "key": "SM-2070960",
@@ -593,7 +648,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "labour charge not shown for a model"
+   "note": "labour charge not shown for a model",
+   "expected_root_cause_type": "master_data",
+   "expected_resolution_action": "master_data_change",
+   "axes_rule": "R1"
   },
   {
    "key": "SM-2092603",
@@ -613,7 +671,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "sale date pulled wrongly from asset history"
+   "note": "sale date pulled wrongly from asset history",
+   "expected_root_cause_type": "user_error",
+   "expected_resolution_action": "explain_to_user",
+   "axes_rule": "R3"
   },
   {
    "key": "SM-2104030",
@@ -636,7 +697,10 @@
     }
    ],
    "needs_human_review": true,
-   "note": "unexpected error when completing a repair"
+   "note": "unexpected error when completing a repair",
+   "expected_root_cause_type": "unknown",
+   "expected_resolution_action": "unknown",
+   "axes_rule": "R7"
   },
   {
    "key": "SM-2088913",
@@ -668,7 +732,10 @@
     }
    ],
    "needs_human_review": true,
-   "note": "labour items not offered on a Bosnia WO"
+   "note": "labour items not offered on a Bosnia WO",
+   "expected_root_cause_type": "master_data",
+   "expected_resolution_action": "master_data_change",
+   "axes_rule": "R1"
   },
   {
    "key": "SM-2082092",
@@ -698,7 +765,10 @@
     }
    ],
    "needs_human_review": true,
-   "note": "asks approval of WO showing wrong warranty type"
+   "note": "asks approval of WO showing wrong warranty type",
+   "expected_root_cause_type": "data_issue",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8d"
   },
   {
    "key": "SM-2146596",
@@ -725,7 +795,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "invoice cannot go out: missing FY document"
+   "note": "invoice cannot go out: missing FY document",
+   "expected_root_cause_type": "integration",
+   "expected_resolution_action": "unknown",
+   "axes_rule": "R5b"
   },
   {
    "key": "SM-2144810",
@@ -752,7 +825,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "warranty package sent to SAP creates no SD document"
+   "note": "warranty package sent to SAP creates no SD document",
+   "expected_root_cause_type": "integration",
+   "expected_resolution_action": "escalate_other_system",
+   "axes_rule": "R5a"
   },
   {
    "key": "SM-2122065",
@@ -786,7 +862,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "WO with missing FY document error"
+   "note": "WO with missing FY document error",
+   "expected_root_cause_type": "integration",
+   "expected_resolution_action": "unknown",
+   "axes_rule": "R5b"
   },
   {
    "key": "SM-2118792",
@@ -811,7 +890,10 @@
     }
    ],
    "needs_human_review": true,
-   "note": "FI package fails to send to SAP for a few partners"
+   "note": "FI package fails to send to SAP for a few partners",
+   "expected_root_cause_type": "integration",
+   "expected_resolution_action": "escalate_other_system",
+   "axes_rule": "R5a"
   },
   {
    "key": "SM-2100070",
@@ -836,7 +918,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "report transfer to SAP fails: FI document not balanced"
+   "note": "report transfer to SAP fails: FI document not balanced",
+   "expected_root_cause_type": "data_issue",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8d"
   },
   {
    "key": "SM-2120545",
@@ -867,7 +952,10 @@
     }
    ],
    "needs_human_review": true,
-   "note": "virtual stock says no parts although SAP has them"
+   "note": "virtual stock says no parts although SAP has them",
+   "expected_root_cause_type": "data_issue",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8d"
   },
   {
    "key": "SM-2133110",
@@ -895,7 +983,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "asks to add new SKUs for Serbia"
+   "note": "asks to add new SKUs for Serbia",
+   "expected_root_cause_type": "master_data",
+   "expected_resolution_action": "master_data_change",
+   "axes_rule": "R1"
   },
   {
    "key": "SM-2092729",
@@ -923,7 +1014,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "asks to add one SKU for Baltics"
+   "note": "asks to add one SKU for Baltics",
+   "expected_root_cause_type": "master_data",
+   "expected_resolution_action": "master_data_change",
+   "axes_rule": "R1"
   },
   {
    "key": "SM-2102064",
@@ -951,7 +1045,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "asks to add one product code for Serbia"
+   "note": "asks to add one product code for Serbia",
+   "expected_root_cause_type": "master_data",
+   "expected_resolution_action": "master_data_change",
+   "axes_rule": "R1"
   },
   {
    "key": "SM-2123794",
@@ -983,7 +1080,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "asks to register an SKU and part list for a model"
+   "note": "asks to register an SKU and part list for a model",
+   "expected_root_cause_type": "master_data",
+   "expected_resolution_action": "master_data_change",
+   "axes_rule": "R1"
   },
   {
    "key": "SM-2070909",
@@ -1007,7 +1107,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "defect codes not shown so job cannot be completed"
+   "note": "defect codes not shown so job cannot be completed",
+   "expected_root_cause_type": "master_data",
+   "expected_resolution_action": "master_data_change",
+   "axes_rule": "R1"
   },
   {
    "key": "SM-2135453",
@@ -1032,7 +1135,10 @@
     }
    ],
    "needs_human_review": true,
-   "note": "labour coefficient of a shop not applied on repair"
+   "note": "labour coefficient of a shop not applied on repair",
+   "expected_root_cause_type": "config",
+   "expected_resolution_action": "config_change",
+   "axes_rule": "R6"
   },
   {
    "key": "SM-2143363",
@@ -1062,7 +1168,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "user cannot log in; account blocked"
+   "note": "user cannot log in; account blocked",
+   "expected_root_cause_type": "access",
+   "expected_resolution_action": "grant_access",
+   "axes_rule": "R2"
   },
   {
    "key": "SM-2122261",
@@ -1092,7 +1201,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "no portal access for a store user"
+   "note": "no portal access for a store user",
+   "expected_root_cause_type": "access",
+   "expected_resolution_action": "grant_access",
+   "axes_rule": "R2"
   },
   {
    "key": "SM-2132602",
@@ -1122,7 +1234,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "restore access to two country segments for call-centre users"
+   "note": "restore access to two country segments for call-centre users",
+   "expected_root_cause_type": "access",
+   "expected_resolution_action": "grant_access",
+   "axes_rule": "R2"
   },
   {
    "key": "SM-2142046",
@@ -1152,7 +1267,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "login rejected as not authorized"
+   "note": "login rejected as not authorized",
+   "expected_root_cause_type": "access",
+   "expected_resolution_action": "grant_access",
+   "axes_rule": "R2"
   },
   {
    "key": "SM-2001523",
@@ -1189,7 +1307,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "NPS SMS stopped after sending condition was changed"
+   "note": "NPS SMS stopped after sending condition was changed",
+   "expected_root_cause_type": "config",
+   "expected_resolution_action": "config_change",
+   "axes_rule": "R6"
   },
   {
    "key": "SM-2091967",
@@ -1217,7 +1338,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "partner does not receive notifications"
+   "note": "partner does not receive notifications",
+   "expected_root_cause_type": "user_error",
+   "expected_resolution_action": "explain_to_user",
+   "axes_rule": "R3"
   },
   {
    "key": "SM-2127733",
@@ -1253,7 +1377,10 @@
     }
    ],
    "needs_human_review": true,
-   "note": "welcome and NPS SMS not sent for a test order"
+   "note": "welcome and NPS SMS not sent for a test order",
+   "expected_root_cause_type": "config",
+   "expected_resolution_action": "config_change",
+   "axes_rule": "R6"
   },
   {
    "key": "SM-2147237",
@@ -1277,7 +1404,10 @@
     }
    ],
    "needs_human_review": true,
-   "note": "exchange approval page does not load for one WO"
+   "note": "exchange approval page does not load for one WO",
+   "expected_root_cause_type": "unknown",
+   "expected_resolution_action": "unknown",
+   "axes_rule": "R7"
   },
   {
    "key": "SM-2094146",
@@ -1303,7 +1433,10 @@
     }
    ],
    "needs_human_review": false,
-   "note": "repair missing from a report"
+   "note": "repair missing from a report",
+   "expected_root_cause_type": "user_error",
+   "expected_resolution_action": "explain_to_user",
+   "axes_rule": "R3"
   },
   {
    "key": "SM-2061644",
@@ -1328,7 +1461,10 @@
     }
    ],
    "needs_human_review": true,
-   "note": "slow system across CRM, Portal and Partner"
+   "note": "slow system across CRM, Portal and Partner",
+   "expected_root_cause_type": "unknown",
+   "expected_resolution_action": "unknown",
+   "axes_rule": "R7"
   }
  ]
 }

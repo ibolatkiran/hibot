@@ -285,7 +285,8 @@ class InvestigationTests(unittest.TestCase):
         self.assertEqual(rep["evidence"][0]["status"], "not_executed")
         self.assertEqual(rep["evidence"][1]["status"], "not_run")
         self.assertEqual(rep["executed_queries"], 0)
-        self.assertEqual(rep["confidence"], 0.6)                          # capped: nothing was executed
+        self.assertEqual(rep["confidence"], 0.5)                          # capped: nothing was executed
+        self.assertEqual(rep["confidence_raw"], 0.9)
         self.assertIn("confidence_note", rep)
         llm.assert_prompt_contains("OBSERVATION (step 1)", call=1)
         llm.assert_prompt_contains("NOT EXECUTED", call=1)
@@ -299,11 +300,14 @@ class InvestigationTests(unittest.TestCase):
 
             def close(self):
                 pass
-        script = [{"action": "run_query", "query_id": "wo_header", "params": WO_PARAMS},
-                  final(confidence=0.9, evidence=[{"type": "query", "ref": "wo_header", "finding": "x"}])]
+        script = [{"action": "run_query", "query_id": "wo_status_timeline", "params": WO_PARAMS},
+                  {"action": "run_query", "query_id": "wo_field_changes", "params": WO_PARAMS},
+                  final(confidence=0.9, evidence=[{"type": "query", "ref": "wo_status_timeline", "finding": "x"},
+                                                  {"type": "query", "ref": "wo_field_changes", "finding": "y"}])]
         _, out, _ = investigate(script, mode=LIVE, runner_factory=lambda r: R())
-        self.assertEqual(out["report"]["confidence"], 0.9)
+        self.assertEqual(out["report"]["confidence"], 0.9)          # 2 independent executed supporting queries
         self.assertEqual(out["report"]["evidence"][0]["status"], "executed")
+        self.assertEqual(out["report"]["confidence_caps_applied"], [])
 
     def test_step_budget_forces_final_report(self):
         def respond(messages):

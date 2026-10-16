@@ -11,6 +11,11 @@ order that preflight resolved.  Everything goes through the Executor (hibot.db t
   integration_failure                                         wo_header, wo_erp_sap, sap_rfc_rest_calls
   notification_failure                                        wo_header, notifications_for_wo
   master_data_request with a SKU                              (tenant_lookup if no work order) + product_sku_lookup
+  access request with user code(s) in the text                user_access_lookup per code (<= 2) (+ tenant_lookup of the ticket
+                                                              country when the user exists); WITHOUT a code a hint tells the LLM
+                                                              that "access / grant_access" is the answer even without DB evidence
+  integration_failure WITHOUT a resolved work order           time window ticket-created -24h/+24h (UTC): job_health,
+                                                              outbound_queue_backlog, db_errors_recent
 
 Live mode only: in dry-run nothing could be learned and the budget would be burnt.
 """
@@ -20,7 +25,7 @@ import json
 import re
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from . import ticket_window
+from . import access, ticket_window
 from .executor import LIVE, Executor
 
 RESERVE = 2                                    # queries always left for the LLM
@@ -95,6 +100,35 @@ def _tail(rows: List[dict], cap: int, fn: Callable[[dict], str]) -> List[str]:
     return out
 
 
+def _format_user_access(rows: List[dict]) -> List[str]:
+    by: Dict[str, List[dict]] = {}
+    for r in rows:
+        by.setdefault(str(r.get("Kind")), []).append(r)
+    su = by.get("SIRIUS_USER") or []
+    if not su:
+        return ["  SIRIUS_USER: NONE (the user code does not exist as a Sirius login in the checked region)"]
+    L = ["  SIRIUS_USER: %d record(s): %s" % (len(su), "; ".join("tenant=%s active=%s tenantCode=%s userType=%s" % (
+        r.get("TenantId"), r.get("Active"), r.get("Detail1"), r.get("Detail2")) for r in su[:3]))]
+    ut = by.get("USER_TENANT") or []
+    L.append("  USER_TENANT (tenant memberships): %s" % (", ".join(str(r.get("TenantId")) for r in ut[:12]) or "NONE"))
+    emp = by.get("EMPLOYEE") or []
+    L.append("  EMPLOYEE: %s" % ("; ".join("tenant=%s active=%s role=%s %s" % (r.get("TenantId"), r.get("Active"), _cell(r.get("Detail1"), 30), r.get("Detail2"))
+                                          for r in emp[:4]) or "NONE (user not provisioned as employee)"))
+    ea = by.get("EMPLOYEE_TENANT_AUTH") or []
+    L.append("  EMPLOYEE_TENANT_AUTH (extra tenants): %s" % (", ".join(str(r.get("TenantId")) for r in ea[:12]) or "NONE"))
+    return L
+
+
+def _format_job_health(rows: List[dict]) -> List[str]:
+    jobs = [r for r in rows if r.get("Source") == "JobRunLog"]
+    errs = [r for r in rows if r.get("Source") == "SiriusIntLog"]
+    bad = [r for r in jobs if (r.get("FailuresInWindow") or 0) > 0 or (r.get("RunsInWindow") or 0) == 0 or r.get("LastEnd") in (None, "")]
+    L = ["  %d jobs seen, %d with failures / no run in the window / unfinished last run" % (len(jobs), len(bad))]
+    L += ["  " + _kv(r, ["Name", "LastAt", "LastEnd", "LastStatus", "RunsInWindow", "FailuresInWindow", "SampleText"], 60) for r in bad[:6]]
+    L += ["  SiriusIntLog " + _kv(r, ["Name", "LastAt", "RunsInWindow", "SampleText"], 70).replace("RunsInWindow", "Cnt") for r in errs[:4]]
+    return L
+
+
 def format_observation(qid: str, rec: dict) -> str:
     head = "[%s] %s" % (qid, json.dumps(rec.get("params") or {}, ensure_ascii=False, default=str))
     if not rec.get("executed"):
@@ -102,7 +136,7 @@ def format_observation(qid: str, rec: dict) -> str:
     rows = _rows(rec)
     L = ["%s -> %d rows, %s ms" % (head, rec.get("row_count") or 0, rec.get("elapsed_ms"))]
     if not rows:
-        L.append("  (no rows)")
+        L += _format_user_access([]) if qid == "user_access_lookup" else ["  (no rows)"]
     elif qid == "wo_header":
         L.append("  " + _kv(rows[0], ["StatusId", "StatusName", "OpenDate", "OperationDate", "VerificationDate", "ServiceShopName",
                                       "TechnicianCode", "WarrantyTypeName", "RejectReasonName", "ErpDocumentId", "SKU", "CaseStatusName",
@@ -138,6 +172,14 @@ def format_observation(qid: str, rec: dict) -> str:
         L += _tail(rows, 6, lambda r: _kv(r, ["Source", "CallTime", "Endpoint", "Success", "HttpStatus", "TryCount", "ResponseBody"], 90))
     elif qid == "notifications_for_wo":
         L += _tail(rows, 6, lambda r: _kv(r, ["Source", "QDate", "SentDate", "SendType", "TemplateName", "SendingStatus", "StatusDescription"], 70))
+    elif qid == "user_access_lookup":
+        L += _format_user_access(rows)
+    elif qid == "job_health":
+        L += _format_job_health(rows)
+    elif qid == "outbound_queue_backlog":
+        L += _tail(rows, 8, lambda r: _kv(r, ["Source", "Name", "Cnt", "MaxRetry", "FirstAt", "LastAt", "SampleText"], 70))
+    elif qid == "db_errors_recent":
+        L += ["  " + _kv(r, ["ErrorProcedure", "ErrorNumber", "Occurrences", "FirstSeen", "LastSeen", "SampleMessage"], 70) for r in rows[:6]]
     elif qid == "tenant_lookup":
         L += ["  " + _kv(r, ["TenantId", "TenantName", "CountryCode", "Active", "LanguageCode"], 40) for r in rows[:5]]
     elif qid == "product_sku_lookup":
@@ -170,6 +212,11 @@ def run(inc: dict, ex: Executor, pf: Dict[str, Any]) -> Dict[str, Any]:
     """Run the playbook; returns {"ran", "selected", "text", "ticket_window"}.  Never raises."""
     res: Dict[str, Any] = {"ran": [], "selected": [], "text": "", "ticket_window": None}
     if ex.mode != LIVE:
+        if access.is_access_incident(inc) and not access.incident_user_codes(inc):       # no DB needed for this hint
+            t: List[str] = []
+            _access(inc, ex, ex.region, [], t, res)
+            if t:
+                res["text"] = "## BASELINE EVIDENCE (deterministic playbook)\n" + "\n".join(t)
         return res
     ran: List[str] = res["ran"]
     texts: List[str] = []
@@ -195,6 +242,10 @@ def run(inc: dict, ex: Executor, pf: Dict[str, Any]) -> Dict[str, Any]:
                      % (last["old_status_id"], last["new_status_id"]), region, ran, texts)
         if not wo and inc.get("problem_type") == "master_data_request" and (inc.get("entities") or {}).get("sku_codes"):
             _master_data(inc, ex, region, ran, texts)
+        if not wo and inc.get("problem_type") == "integration_failure":
+            _integration_window(inc, ex, region, ran, texts, res)
+        if access.is_access_incident(inc):
+            _access(inc, ex, region, ran, texts, res)
     except Exception as e:                                            # noqa: BLE001 - a baseline bug must not kill the run
         texts.append("(baseline aborted: %s: %s)" % (e.__class__.__name__, str(e)[:120]))
     if texts:
@@ -216,3 +267,57 @@ def _master_data(inc: dict, ex: Executor, region: str, ran: List[str], texts: Li
              region, ran, texts)
     else:
         texts.append("[product_sku_lookup] skipped: country %s maps to %d tenants, tenant unknown (ask for it or use tenant_lookup)" % (country, len(rows)))
+
+
+# ----------------------------------------------------------- integration without a work order
+
+WINDOW_HOURS = 24
+
+
+def ticket_time_window(inc: dict, hours: int = WINDOW_HOURS) -> Optional[Tuple[str, str]]:
+    """(FromDate, ToDate) as naive-UTC ISO strings, ticket `created` -/+ hours; None when `created` is unknown."""
+    created = ticket_window.parse_created(inc.get("created"))
+    if created is None:
+        return None
+    import datetime as _dt
+    f = "%Y-%m-%dT%H:%M:%S"
+    return ((created - _dt.timedelta(hours=hours)).strftime(f), (created + _dt.timedelta(hours=hours)).strftime(f))
+
+
+def _integration_window(inc: dict, ex: Executor, region: str, ran: List[str], texts: List[str], res: dict) -> None:
+    w = ticket_time_window(inc)
+    if w is None:
+        texts.append("[integration window] skipped: ticket creation time unknown")
+        return
+    params = {"FromDate": w[0], "ToDate": w[1]}
+    res["window"] = {"from_utc": w[0], "to_utc": w[1]}
+    texts.append("(No work order is known: time-window evidence around the ticket creation, %s .. %s UTC. These logs are platform-wide, "
+                 "not tenant scoped; a problem visible here only SUGGESTS the cause - say so.)" % w)
+    for qid, why in (("job_health", "baseline: did the background jobs run / fail around the ticket time?"),
+                     ("outbound_queue_backlog", "baseline: outbound queue / post errors around the ticket time"),
+                     ("db_errors_recent", "baseline: database errors around the ticket time")):
+        _run(ex, qid, dict(params), why, region, ran, texts)
+
+
+# ----------------------------------------------------------------------- access requests
+
+def _access(inc: dict, ex: Executor, region: str, ran: List[str], texts: List[str], res: dict) -> None:
+    codes = access.incident_user_codes(inc)
+    res["access"] = {"user_codes_found": len(codes)}
+    if not codes:
+        if inc.get("problem_type") == "access_request":
+            texts.append("[access request] No user code / login in the ticket text (\"kullanıcı kodu ticket'ta yok\"). This is still recognisable as an "
+                         "ACCESS request from its text: classify root_cause_type=access, resolution_action=grant_access with a MODEST confidence "
+                         "(<= 0.6), name the missing user code as the thing to ask for; do NOT answer unknown.")
+        return
+    if ex.mode != LIVE:
+        return
+    found_any = False
+    for code in codes[:2]:
+        rec = _run(ex, "user_access_lookup", {"UserCode": code}, "baseline: access request - does the user exist, which tenants / role?", region, ran, texts)
+        if rec and rec.get("executed") and (rec.get("row_count") or 0) > 0:
+            found_any = True
+    country = str(inc.get("country") or "").upper()
+    if found_any and re.fullmatch(r"[A-Z]{2}", country):
+        _run(ex, "tenant_lookup", {"CountryCode": country}, "baseline: tenants of the ticket country (to compare with the user's memberships)",
+             region, ran, texts)

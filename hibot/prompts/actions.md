@@ -25,7 +25,8 @@
 ```
 {"action":"final_report",
  "summary":"1-3 cumle Turkce ozet",
- "classification":"code_defect|master_data|access|data_correction|integration|config|user_error|unknown",
+ "root_cause_type":"config|code_defect|master_data|integration|user_error|access|data_issue|unknown",
+ "resolution_action":"data_fix|config_change|code_change|master_data_change|explain_to_user|grant_access|escalate_other_system|none|unknown",
  "root_cause":"Turkce kok neden; kanit yoksa 'belirsiz' yaz",
  "confidence":0.0,
  "evidence":[{"type":"query|code|similar_case|card","ref":"wo_history_function | path/File.cs:123 | SM-1234567 | card_id","finding":"gorulen somut sonuc"}],
@@ -36,6 +37,7 @@
    "root_cause":"...","verification_queries":[{"query_id":"product_sku_lookup","params_from_entities":{"Sku":"entities.sku_codes[0]","TenantId":"$tenant"}}],
    "fix_steps":["..."],"code_locations":[]}}
 ```
+Do NOT send the legacy `classification`: it is derived from the two axes by the orchestrator.
 `suggested_card` is optional: include it only when the finding is general enough to recur and is supported by evidence.
-`confidence` is 0..1 (>= 0.8 only with executed-query or code evidence that decides the question).
+`confidence` is 0..1 (>= 0.8 only with executed-query or code evidence that decides the question; the orchestrator caps it, see rule 14).
 `verification_query_ids` lists templates a developer should run to re-check (also useful when queries could not run).

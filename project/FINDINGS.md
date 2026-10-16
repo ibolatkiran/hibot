@@ -515,6 +515,47 @@ Rapor: `knowledge/eval/results_baseline_20261016.md`. Test seti 40 ticket, canl�
 
 Etiket notu: 12 ticket "insan incelemesi gerekli" işaretli. Kullanıcı da gerçek çözümü bilmiyor (2026-10-16), etiketler gümüş kalıyor.
 
+## 16. İyileştirme turu 1 ve yeniden ölçüm (round1_20261016), 2026-10-17
+
+Karşılaştırma: `knowledge/eval/compare_baseline_vs_round1.md`. Test seti bir kez çalıştırıldı. Geliştirme 22 canlı analizle dev seti ve set dışı ticket'lar üzerinde yapıldı (aşırı uyum kuralına uyuldu). Etiket eksen kuralları (`label_axes_rules.md`) puanlamadan **önce** yazıldı.
+
+**Değişiklikler**
+- **İki eksenli sınıflandırma:** `root_cause_type` + `resolution_action` (`hibot/agent/axes.py`); eski `classification` alanı bunlardan türetiliyor. Kartlar da eksenleri taşıyor.
+- **Deterministik kalibrasyon** (`calibration.py`): çalıştırılmış sorgu yoksa en fazla 0,5; destekleyici kanıt yoksa 0,6; desteklenen onaylı kart ya da bağımsız 2 kanıt yoksa 0,8. Rapora `confidence_raw` ve `confidence_caps_applied` yazılıyor.
+- **Yetki temel seti** (`access.py`): sadece kullanıcı kodu çıkarılıyor, isim ve e-posta asla. `user_access_lookup` çalıştırılıyor.
+- **İş emri olmayan entegrasyon vakaları:** ticket'ın açılışından ±24 saat içinde `job_health`, `outbound_queue_backlog` ve `db_errors_recent` çalışıyor.
+- **Kurallar:** "pencerede değişiklik yok ≠ kullanıcı hatası". Onaylı bir kart sadece tenant ve statü üzerinden eşleştiyse aynen benimsenmiyor, hipotez olarak kalıyor.
+
+**Sonuçlar** (güvenilir etiketler, n=30 — 1 ticket ≈ 3,3 puan; LLM değişkenliği de var)
+
+| Metrik | Baseline | Tur 1 |
+|---|---|---|
+| **Emin ama yanlış** (eski etiket) | 23% (7) | **3% (1)** ✅ |
+| Emin ama yanlış (root_cause_type) | 17% | 7% ✅ |
+| Kesin / esnek (eski etiket) | 40% / 50% | 53% / 53% ❌ (hedef >65%) |
+| root_cause_type isabeti | 50% | 57% |
+| İki eksen birlikte doğru | 37% | 47% |
+| Bulgu isabeti | 92% | 90% |
+| İş emri / tenant çözümleme | 95% / 100% | 95% / 100% |
+| 0,7–1,0 güven aralığında isabet | 50% (n=14) | **86% (n=7)** |
+
+**Gruplar** (kesin isabet)
+- Yetki: %25 → **%100**
+- Statü izi: %40 → **%80** (emin-yanlış 3 → 0)
+- Entegrasyon: %25 → %50
+- Değişiklik olmayan statü vakaları: %25'te kaldı
+- Bildirim ve performans: %0'da kaldı
+- ⚠️ **Ana veri gerileme:** %80 → %40 (2 ticket). Aşırı uyumu önlemek için test ticket'larına bakılmadı. Muhtemel sebepler büyüyen prompt veya LLM değişkenliği; dev tarafında incelenecek.
+
+**Değerlendirme**
+- Güvenilirlik hedefi tuttu: HiBot artık nadiren "emin ama yanlış" oluyor; yüksek güvenle verdiği cevapların %86'sı doğru.
+- İsabet hedefi tutmadı.
+- Kalan zayıf alanlar:
+  - bildirim ve performans grupları (%0)
+  - ana veri gerilemesi
+  - 0,5–0,65 bandında sıkışan doğru cevaplar
+  - gümüş etiket tavanı belirsiz
+
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
 Önyüzün çağırdığı ama backend'de karşılığı olmayan **109 benzersiz çağrı** var, liste: `knowledge/codemap/trace_index.json` → `unmatched_frontend_calls`. Örnekler:

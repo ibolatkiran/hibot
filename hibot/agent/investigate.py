@@ -14,12 +14,12 @@ from typing import Callable, Dict, List, Optional
 from hibot.llm.client import LLMClient, LLMError
 from hibot.llm.jsonio import JsonRepairFailed, complete_json
 
-from . import actions, config, playbooks, ticket_window
+from . import actions, axes, calibration, config, playbooks, ticket_window
 from .executor import Executor
 from .prompting import build_case_prompt
 from hibot import prompts
 
-NO_QUERY_CONF_CAP = 0.6
+NO_QUERY_CONF_CAP = calibration.NO_QUERY_CAP
 
 
 class Investigation:
@@ -127,7 +127,7 @@ class Investigation:
             conf = float(act.get("confidence", 0))
         except (TypeError, ValueError):
             conf = 0.0
-        return act.get("classification") == "unknown" or conf < 0.4
+        return axes.normalize(dict(act)).get("classification") == "unknown" or conf < 0.4
 
     def _status_shallow(self) -> bool:
         """Ticket talks about a status / cancel / error, a work order is known, but no query looked at status history or
@@ -174,7 +174,7 @@ class Investigation:
     def _force_final(self) -> dict:
         self.forced = True
         tail = ("BUDGET EXHAUSTED. Reply NOW with action=final_report only, based on the evidence so far. "
-                "If it is not sufficient, use classification \"unknown\" with low confidence and list what is missing in fix_steps.")
+                "If it is not sufficient, use root_cause_type \"unknown\" with low confidence and list what is missing in fix_steps.")
         try:
             act = self._ask(tail=tail, only_final=True)
             return actions.split_report(act)
@@ -185,7 +185,8 @@ class Investigation:
     def _fallback(self, reason: str) -> dict:
         ev = [{"type": "query", "ref": q["query_id"], "finding": "Çalıştırma durumu: %s" % ("çalıştı" if q["executed"] else "çalıştırılmadı")}
               for q in self.executor.queries][:10]
-        return {"summary": "Analiz tamamlanamadı: " + reason, "classification": "unknown", "root_cause": "Belirsiz (otomatik analiz sonuç üretemedi).",
+        return {"summary": "Analiz tamamlanamadı: " + reason, "classification": "unknown", "root_cause_type": "unknown", "resolution_action": "unknown",
+                "root_cause": "Belirsiz (otomatik analiz sonuç üretemedi).",
                 "confidence": 0.0, "evidence": ev, "code_locations": [], "fix_steps": ["Analizi elle sürdürün; hazırlanan sorgular raporun 'Çalıştırılan sorgular' bölümünde."],
                 "verification_query_ids": sorted({q["query_id"] for q in self.executor.queries if q["query_id"] != "adhoc"}),
                 "fallback": True}
@@ -225,11 +226,8 @@ class Investigation:
         executed = sum(1 for q in self.executor.queries if q["executed"])
         rep["executed_queries"] = executed
         rep["mode"] = self.executor.mode
-        conf = float(rep.get("confidence", 0))
-        if executed == 0 and conf > NO_QUERY_CONF_CAP:
-            rep["confidence_original"] = conf
-            rep["confidence"] = NO_QUERY_CONF_CAP
-            rep["confidence_note"] = "Hiçbir sorgu çalıştırılmadığı için güven %.2f ile sınırlandı." % NO_QUERY_CONF_CAP
+        rep = axes.normalize(rep)
+        calibration.apply(rep, self.executor.queries)
         rep.setdefault("code_locations", [])
         rep.setdefault("verification_query_ids", [])
         return rep

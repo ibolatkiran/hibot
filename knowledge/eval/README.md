@@ -14,7 +14,8 @@ Never tune prompts/cards on `test` tickets (cards created from `test` tickets wo
 
 ## eval_set.json ticket
 `key, split, stratum, region, problem_type, app, expected_work_order_ids, expected_tenant_id (from ticket_windows.jsonl when known),
-expected_classification (code_defect|master_data|access|data_correction|integration|config|user_error|unknown), label_confidence,
+expected_classification (code_defect|master_data|access|data_correction|integration|config|user_error|unknown),
+expected_root_cause_type / expected_resolution_action / axes_rule (round 1, added mechanically by `tools/eval/add_axes.py`, see `label_axes_rules.md`), label_confidence,
 label_basis, expected_findings[], needs_human_review, note (<=120 chars own-words paraphrase)`.
 
 `expected_findings` checks (1-3 per ticket, evaluated on report.json + run record):
@@ -40,6 +41,9 @@ Run output: `runs/eval_<tag>/results.jsonl` (checkpoint, appended per ticket; gi
   (symmetric, not transitive); everything else must match.
 * **Findings hit rate**: hit checks / all checks.
 * **Calibration**: reliable-label exact accuracy per confidence bucket 0-0.4, 0.4-0.7, 0.7-1.0.
+* **Two axes (round 1)**: `root_cause_type` accuracy, `resolution_action` accuracy, "both axes" accuracy and **confidently wrong on root_cause_type**
+  (conf >= 0.7, reliable labels), plus a calibration table on root_cause_type. Old reports without axes are mapped from the legacy label with the
+  table in `label_axes_rules.md`, so a baseline run can be re-scored fairly (its resolution_action is pessimistic by construction). Legacy metrics are unchanged.
 * **Honest unknown rate**: `unknown` with confidence < 0.5, over all tickets.
 * **Confidently wrong rate** (most important failure metric): classification != expected with confidence >= 0.7, over reliable labels.
 * Averages: elapsed seconds, queries (prepared / executed), LLM calls; card match rate; per-stratum breakdown, confusion matrix.

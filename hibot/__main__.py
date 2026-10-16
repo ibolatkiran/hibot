@@ -51,7 +51,8 @@ def cmd_analyze(a) -> int:
     print("Run: %s | mod: %s | bölge: %s | llm: %s" % (run["run_id"], mode, region, run["llm"]))
     ran = sum(1 for q in run["queries"] if q["executed"])
     print("Sorgu: %d hazırlandı, %d gerçekten çalıştırıldı" % (len(run["queries"]), ran))
-    print("Sınıflandırma: %s | güven: %.2f" % (rep["classification"], rep["confidence"]))
+    print("Kök neden türü: %s | Yapılması gereken: %s | sınıflandırma (eski): %s | güven: %.2f" % (
+        rep.get("root_cause_type"), rep.get("resolution_action"), rep["classification"], rep["confidence"]))
     print("Özet: %s" % rep["summary"])
     print("Geri bildirim: python -m hibot feedback %s --verdict correct|wrong|partial" % run["run_id"])
     return 0

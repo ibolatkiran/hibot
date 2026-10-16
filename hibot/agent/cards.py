@@ -43,7 +43,7 @@ import unicodedata
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
-from . import config
+from . import axes, config
 from .actions import CLASSIFICATIONS
 
 STATUSES = ("draft", "confirmed", "rejected")
@@ -62,6 +62,8 @@ CARD_SCHEMA: Dict[str, Any] = {
             "keywords": {"type": "array", "items": {"type": "string"}},
             "entity_requirements": {"type": "array", "items": {"type": "string"}}}},
         "classification": {"type": ["string", "null"], "enum": [None, *CLASSIFICATIONS]},
+        "root_cause_type": {"type": ["string", "null"], "enum": [None, *axes.ROOT_CAUSE_TYPES]},
+        "resolution_action": {"type": ["string", "null"], "enum": [None, *axes.RESOLUTION_ACTIONS]},
         "state_signature": {"type": "object", "required": ["tenant_id", "from_status_id", "to_status_id"], "properties": {
             "tenant_id": {"type": "integer"}, "from_status_id": {"type": "integer"}, "to_status_id": {"type": "integer"},
             "from_status_name": {"type": ["string", "null"]}, "to_status_name": {"type": ["string", "null"]},
@@ -291,4 +293,41 @@ def migrate_state_signatures(directory: Optional[Path] = None, tickets: Optional
                                                 "note": "migration: tenant/from/to taken from status_step_check constants"})
             save_card(c, d)
             done.append(c["id"])
+    return done
+
+
+def card_axes(card: dict):
+    """(root_cause_type, resolution_action) of a card: explicit axes, else derived from the legacy classification, else (None, None)."""
+    rct, ra = card.get("root_cause_type"), card.get("resolution_action")
+    if rct or ra:
+        return rct, ra
+    if card.get("classification"):
+        return axes.derive_axes(card["classification"])
+    return None, None
+
+
+def migrate_axes(directory: Optional[Path] = None) -> List[str]:
+    """Round-1 migration (idempotent): add root_cause_type / resolution_action to cards that have none.
+
+    * card with a legacy classification            -> axes.derive_axes (confirmed Egypt card: user_error / explain_to_user)
+    * footprint draft (state_signature) w/o classification:
+        transition NOT configured (transition_configured False) -> config / data_fix   (StatusStep gap, developers force it by hand)
+        transition configured                                   -> data_issue / data_fix (step exists, job/trigger or one-off data problem)
+    Cards without classification and without state_signature (examples) are left alone."""
+    d = directory or config.cards_dir()
+    done: List[str] = []
+    for c in load_cards(d, include_rejected=True):
+        if c.get("root_cause_type") or c.get("resolution_action"):
+            continue
+        if c.get("classification"):
+            rct, ra = axes.derive_axes(c["classification"])
+        elif c.get("state_signature"):
+            rct, ra = ("config", "data_fix") if c["state_signature"].get("transition_configured") is False else ("data_issue", "data_fix")
+        else:
+            continue
+        c["root_cause_type"], c["resolution_action"] = rct, ra
+        c.setdefault("history", []).append({"ts": now(), "event": "axes_added", "run_id": None,
+                                            "note": "migration: root_cause_type=%s, resolution_action=%s" % (rct, ra)})
+        save_card(c, d)
+        done.append(c["id"])
     return done

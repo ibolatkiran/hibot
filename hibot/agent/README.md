@@ -53,7 +53,8 @@ runs through `hibot.db.runner.QueryRunner` (read-only, masked, audited). Region 
 {"action":"run_sql","sql":"SELECT TOP 20 ... WHERE TenantId = 5","region":"EU","why":".."}       # ad-hoc, hibot.db.safe_sql, allow_pii=False
 {"action":"inspect_code","target":{"kind":"endpoint|screen|db_object|error_text|text","value":"..","app":"crm"},"why":".."}
 {"action":"read_source","path":"SiriusApi/Sirius/Controllers/X.cs | dbo.GetSiriusWorkOrderHistory | <absolute>","start_line":1,"end_line":80,"why":".."}
-{"action":"final_report","summary":..,"classification":"code_defect|master_data|access|data_correction|integration|config|user_error|unknown",
+{"action":"final_report","summary":..,"root_cause_type":"config|code_defect|master_data|integration|user_error|access|data_issue|unknown",
+ "resolution_action":"data_fix|config_change|code_change|master_data_change|explain_to_user|grant_access|escalate_other_system|none|unknown",
  "root_cause":..,"confidence":0.0-1.0,"evidence":[{"type":"query|code|similar_case|card","ref":..,"finding":..}],
  "code_locations":[{"repo":..,"path":..,"line":..,"why":..}],"fix_steps":[..],"verification_query_ids":[..],"suggested_card":{..}}
 ```
@@ -61,6 +62,23 @@ Prompts: `hibot/prompts/system.md` (role, strategy, evidence rules, Turkish outp
 The first user message (`prompting.py`) is the case file: ticket, entities, similar cases, candidate cards with concrete verification
 queries, automatic code context, the compact template catalog (`TemplateRegistry.catalog_text`), mode and budget.
 Each later turn carries `OBSERVATION (step n)` plus the budget status.
+
+### Two-axis classification (`axes.py`, round 1)
+The LLM answers `root_cause_type` (WHY) and `resolution_action` (WHAT to do); the legacy `classification` is DERIVED (never chosen):
+root_cause_type in {master_data, access, integration, code_defect} -> same name; else resolution_action `data_fix` -> `data_correction`;
+else config -> config, user_error -> user_error, data_issue -> data_correction, unknown -> unknown. Reports/cards/runs that only carry the
+legacy label get axes derived back (`LEGACY_TO_AXES`). A legacy-only `final_report` is still accepted (fake demo, old tests). The rendered
+report shows "Kök neden türü" and "Yapılması gereken". Cards have optional `root_cause_type` / `resolution_action`
+(`python tools/learning/add_card_axes.py` migrates: confirmed Egypt card user_error/explain_to_user, footprint drafts config/data_fix, or
+data_issue/data_fix when the transition is configured).
+
+### Confidence calibration (`calibration.py`, round 1)
+The LLM confidence is post-processed deterministically (in `Investigation._ground` and again in `pipeline` after a card was applied).
+`confidence_raw` = LLM value, `confidence_caps_applied` = [{cap, reason, from, to}], `supporting_evidence` = what counted.
+Caps: 0.5 when no query was executed; 0.6 unless some evidence item points to an EXECUTED query with a non-empty relevant result (not
+`wo_locate`/`tenant_lookup`/`wo_header`; 0 rows count for `user_access_lookup`/`product_sku_lookup`), a supported card, or a ticket-window
+manual-fix finding; 0.8 unless a supported CONFIRMED card or >= 2 independent supporting evidences (distinct query ids; the ticket-window
+finding counts as `wo_field_changes`, a supported card as one more).
 
 ### Known-issue card (`knowledge/cards/<id>.json`, `cards.py`)
 `id, title, symptom_signature{problem_type, app, keywords[], entity_requirements[]}, root_cause, verification_queries[{query_id,
@@ -93,7 +111,7 @@ playbook are reused, not repeated). `status_step_check` is evaluated against the
 inconclusive. The case file gets a "BİLİNEN SORUN KARTI" section (pinned, never truncated); the report shows
 `Eşleşen kart: <id> (status), doğrulama: destekliyor|çelişiyor|doğrulanamadı`, cites the card as `evidence` (type `card`, so
 `hibot feedback --verdict correct` adds the ticket to the card's evidence) and, for a CONFIRMED card that is supported, reuses the card's
-classification, root cause and fix steps verbatim (LLM extras are appended and prefixed `[LLM ek önerisi]`; a historical manual force of the same
+root_cause_type / resolution_action (legacy classification derived), root cause and fix steps verbatim, but ONLY when the ticket text mentions the card's target action (a state-only match, tenant + status, stays a hypothesis: verdict `doğrulanamadı`)  (LLM extras are appended and prefixed `[LLM ek önerisi]`; a historical manual force of the same
 transition is added as "SÜREÇ İHLALİ"). A contradicting card changes nothing in the report except the explicit `çelişiyor` line. Live mode only.
 
 ## Budgets (`config.Budget`, CLI `--max-steps`, `--max-queries`)
@@ -128,6 +146,12 @@ After preflight, deterministic queries run before the LLM (counted in the query 
   `wo_field_changes`, `wo_status_transition_check`, then `status_step_check` for the last status change found in the ticket window;
 * `integration_failure`: `wo_header`, `wo_erp_sap`, `sap_rfc_rest_calls`; `notification_failure`: `wo_header`, `notifications_for_wo`;
 * `master_data_request` with a SKU and no WO: `tenant_lookup` (ticket country) then `product_sku_lookup` if exactly one tenant matches.
+* access requests (problem_type `access_request` or access words): user codes (code-like tokens only: letter+6-8 digits, labelled "user id / kullanıcı kodu ..."
+  tokens containing a digit, code-like e-mail local parts; never names or e-mail addresses, see `access.py`) go to `entities.user_codes` (intake);
+  `user_access_lookup` per code (max 2) and `tenant_lookup` of the ticket country when the user exists. No code in an `access_request` -> a hint
+  ("kullanıcı kodu ticket'ta yok") tells the LLM to answer access / grant_access with confidence <= 0.6 instead of unknown (also in dry-run);
+* `integration_failure` WITHOUT a resolved work order: `job_health`, `outbound_queue_backlog`, `db_errors_recent` with `FromDate`/`ToDate` = ticket
+  `created` -/+ 24 h (UTC; the first two got these optional params). These logs are not tenant scoped. Compact summaries (failing / never-run / unfinished jobs only).
 Each observation is compacted (row caps, newest rows kept, `OBS_CAP` 1500 chars) into the "BASELINE EVIDENCE" case-file section, which is
 never truncated. SM-2139009 case prompt: ~23.6k chars (system 9.8k + case file); catalog purposes are shortened to ~190 chars.
 

@@ -8,6 +8,7 @@ from typing import Any, Callable, Optional, Union
 from hibot.db.templates import TemplateRegistry
 from hibot.llm.client import LLMClient
 
+from . import calibration
 from . import cards as cardmod
 from . import config, intake, known_issue, playbooks, preflight, store
 from .code_context import CodeContext
@@ -47,6 +48,7 @@ def analyze(key: Optional[str] = None, text: Optional[str] = None, *, llm: LLMSo
         ex.close()
     if ka and ka.get("match"):
         known_issue.apply_to_report(out["report"], ka, out["report"].get("executed_queries", 0))
+        calibration.apply(out["report"], out["queries"])       # a card may have raised the confidence: caps are re-evaluated
     elif ka and ka.get("error"):
         out["warnings"].append("known-issue shortcut failed: " + ka["error"])
     run_id = store.new_run_id(inc.get("key"))

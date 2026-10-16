@@ -3,6 +3,8 @@ id: job_health
 title: Background job health
 purpose: Latest run of every job in SiriusInt.JobRunLog (status, duration, failures in the window) plus procedures that logged errors in SiriusInt.SiriusIntLog. Use for "job did not run", "data not synced / updated since X", "batch stuck", "integration job failing".
 param: WindowHours | int | optional default=24 min=1 max=720 | look-back window in hours for run and error counts
+param: FromDate | datetime | optional | window start (UTC); default now minus WindowHours. With FromDate/ToDate the "last run" is the last run BEFORE ToDate (look back 30 days from FromDate)
+param: ToDate | datetime | optional | window end (exclusive, UTC); default open (now). Use FromDate/ToDate to look at the time around an old incident
 param: JobName | string | optional like max=100 | only jobs / procedures whose name contains this text
 regions: EU, APAC
 tables: SiriusInt.JobRunLog, SiriusInt.SiriusIntLog
@@ -15,7 +17,8 @@ WITH runs AS (
     SELECT j.JobName, j.StartTime, j.EndTime, j.Status, j.ErrorMessage,
            ROW_NUMBER() OVER (PARTITION BY j.JobName ORDER BY j.StartTime DESC, j.Id DESC) AS rn
     FROM SiriusInt.JobRunLog j
-    WHERE j.StartTime >= DATEADD(DAY, -30, GETDATE())
+    WHERE j.StartTime >= DATEADD(DAY, -30, COALESCE(@FromDate, GETDATE()))
+      AND (@ToDate IS NULL OR j.StartTime < @ToDate)
       AND (@JobName IS NULL OR j.JobName LIKE '%' + @JobName + '%')
 ),
 stats AS (
@@ -23,7 +26,8 @@ stats AS (
            SUM(CASE WHEN j.Status LIKE '%fail%' OR j.Status LIKE '%error%'
                       OR (j.ErrorMessage IS NOT NULL AND j.ErrorMessage <> '') THEN 1 ELSE 0 END) AS FailuresInWindow
     FROM SiriusInt.JobRunLog j
-    WHERE j.StartTime >= DATEADD(HOUR, -@WindowHours, GETDATE())
+    WHERE j.StartTime >= COALESCE(@FromDate, DATEADD(HOUR, -@WindowHours, GETDATE()))
+      AND (@ToDate IS NULL OR j.StartTime < @ToDate)
       AND (@JobName IS NULL OR j.JobName LIKE '%' + @JobName + '%')
     GROUP BY j.JobName
 )
@@ -37,7 +41,8 @@ WHERE r.rn = 1
 UNION ALL
 SELECT 'SiriusIntLog', l.ProcedureName, MAX(l.CreateDate), NULL, NULL, NULL, NULL, COUNT(*), MAX(LEFT(l.ErrorText, 300))
 FROM SiriusInt.SiriusIntLog l
-WHERE l.CreateDate >= DATEADD(HOUR, -@WindowHours, GETDATE())
+WHERE l.CreateDate >= COALESCE(@FromDate, DATEADD(HOUR, -@WindowHours, GETDATE()))
+  AND (@ToDate IS NULL OR l.CreateDate < @ToDate)
   AND (@JobName IS NULL OR l.ProcedureName LIKE '%' + @JobName + '%')
 GROUP BY l.ProcedureName
 ORDER BY LastAt DESC

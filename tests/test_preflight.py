@@ -147,7 +147,7 @@ class PromptRuleTests(unittest.TestCase):
         for needle in ("REPORTER's country", "RESOLVED WORK ORDERS", "tenant_lookup", "0 rows", "wo_status_timeline",
                        "outbound_queue_backlog", "sap_rfc_rest_calls", "wo_field_changes"):
             self.assertIn(needle, s)
-        self.assertLess(len(s), 11000)
+        self.assertLess(len(s), 15000)       # round 1: two axes + access/integration/calibration rules
 
 
 if __name__ == "__main__":

@@ -125,6 +125,12 @@
         }
       },
       "status_before": "draft"
+    },
+    {
+      "ts": "2026-10-16T20:44:31+00:00",
+      "event": "axes_added",
+      "run_id": null,
+      "note": "migration: root_cause_type=user_error, resolution_action=explain_to_user"
     }
   ],
   "state_signature": {
@@ -139,5 +145,7 @@
     ],
     "transition_configured": false
   },
-  "classification": "user_error"
+  "classification": "user_error",
+  "root_cause_type": "user_error",
+  "resolution_action": "explain_to_user"
 }

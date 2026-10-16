@@ -11,7 +11,7 @@ import sys
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
-from . import config
+from . import access, config
 
 KEY_RE = re.compile(r"^[A-Z][A-Z0-9]+-\d+$")
 
@@ -166,6 +166,18 @@ def find_similar_for_text(incident: dict, top_k: int = 5) -> List[dict]:
     return [_brief(tickets[j], round(v, 3)) for j, v in out[:top_k]]
 
 
+def _add_user_codes(inc: dict) -> dict:
+    """Access tickets: user identifiers (code-like tokens only, see access.py) go to entities['user_codes'] for the playbook."""
+    if access.is_access_incident(inc):
+        ents = dict(inc.get("entities") or {})
+        ents.pop("user_codes", None)
+        inc["entities"] = ents
+        codes = access.incident_user_codes(inc)
+        if codes:
+            ents["user_codes"] = codes
+    return inc
+
+
 def build_incident(key: Optional[str] = None, text: Optional[str] = None) -> dict:
     """Jira key -> precomputed record; free text -> fresh extraction + BM25 similarity.
     key + text where the key is unknown: text is analysed as free text and the key is kept as a label."""
@@ -173,11 +185,11 @@ def build_incident(key: Optional[str] = None, text: Optional[str] = None) -> dic
         if not KEY_RE.match(key):
             raise IntakeError("bad Jira key %r" % key)
         try:
-            return from_jira_key(key, extra_text=text or "")
+            return _add_user_codes(from_jira_key(key, extra_text=text or ""))
         except IntakeError:
             if not text:
                 raise
     inc = from_text(text or "")
     inc["key"] = key
     inc["similar"] = find_similar_for_text(inc)
-    return inc
+    return _add_user_codes(inc)
