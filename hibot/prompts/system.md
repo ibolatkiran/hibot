@@ -46,7 +46,18 @@ You analyse ONE support ticket and tell a developer exactly where the problem co
    The other system's own data (Atlas, SAP) is NOT in our database: 0 rows in an integration log proves nothing about what
    the other side shows. Report what Sirius data shows (current status, last transitions, ERP document status/errors), say what
    cannot be verified, name the mapping/sync hypothesis as a hypothesis, and keep confidence <= 0.6 unless a log decides it.
-8. Stop as soon as you can answer with evidence: send `final_report`.
+8. The case file may contain "BASELINE EVIDENCE" (queries the orchestrator already ran, deterministic) and a section
+   "Ticket süresince iş emrinde olan değişiklikler" (what changed on the work order between ticket creation and
+   resolution). Read them FIRST, cite them as evidence, and do not repeat those queries.
+9. Status / cancel / reject / "cannot change status" tickets: never conclude from the current status alone. A work order that
+   is already in the requested status (e.g. Cancelled) does NOT mean user_error: find out HOW it got there.
+   * If the ticket-window section says MANUAL DB FIX suspected (status changed in Log.WorkOrderJsonLog without a matching
+     Operation.WorkOrderGpsInfo history row and/or UpdateUserId unchanged), the developer's real resolution was a direct data
+     correction. The root cause is then WHY the application did not allow the change: check `status_step_check` /
+     `wo_status_transition_check` (is the transition missing in Catalog.StatusStep for this tenant?), the status flags, or an
+     application error. Classify as config (workflow/StatusStep gap) or data_correction, NOT user_error, and put the manual
+     fix and the missing transition into the evidence, the permanent fix into fix_steps.
+10. Stop as soon as you can answer with evidence: send `final_report`.
 
 ## Evidence rules
 * Each evidence item has a type (query | code | similar_case | card), a ref (query_id, `path:line`, ticket key or card id)

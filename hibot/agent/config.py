@@ -58,7 +58,7 @@ APAC_COUNTRIES = {"CN", "TW", "TH", "VN", "HK", "MY", "SG", "ID", "AU", "NZ", "K
 @dataclass
 class Budget:
     max_steps: int = 8                # LLM-chosen actions (excluding the forced final report)
-    max_queries: int = 6              # run_query + run_sql that reach the DB layer (executed or dry-run)
+    max_queries: int = 10             # preflight + baseline playbook + LLM queries (run_query + run_sql reaching the DB layer)
     max_adhoc_sql: int = 2
     max_context_chars: int = 60000    # whole prompt; older observations are shortened beyond this
     max_obs_chars: int = 4000         # one observation

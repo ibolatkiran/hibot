@@ -14,7 +14,7 @@ def _j(o) -> str:
 
 def build_case_prompt(inc: dict, matches: List[dict], code_ctx: List[dict], catalog_text: str, *, mode: str,
                       region: str, budget: config.Budget, max_chars: int = 30000,
-                      resolved: str = "") -> str:
+                      resolved: str = "", baseline: str = "") -> str:
     L: List[str] = []
     L.append("## TICKET %s (source: %s)" % (inc.get("key") or "free text", inc.get("source")))
     L.append("app=%s country=%s company_code=%s language=%s rule-based problem_type=%s (a guess; may be wrong) status=%s" % (
@@ -52,8 +52,6 @@ def build_case_prompt(inc: dict, matches: List[dict], code_ctx: List[dict], cata
                 L.append("  missing entities: " + ", ".join(m["missing_entities"]))
     else:
         L.append("(no card matched)")
-    if resolved:
-        L.append("\n" + resolved)
     L.append("\n## CODE CONTEXT (automatic pre-lookup)")
     if code_ctx:
         for c in code_ctx:
@@ -61,6 +59,11 @@ def build_case_prompt(inc: dict, matches: List[dict], code_ctx: List[dict], cata
                                         _j(c.get("result") if c.get("ok") else {"error": c.get("error")})[:1500]))
     else:
         L.append("(none; use inspect_code)")
+    pinned_from = len(L)                           # everything from here on is never truncated
+    if resolved:
+        L.append("\n" + resolved)
+    if baseline:
+        L.append("\n" + baseline)
     L.append("\n## QUERY TEMPLATE CATALOG (region %s; ! required, ? optional)" % region)
     L.append(catalog_text)
     L.append("\n## RUN SETTINGS")
@@ -69,7 +72,8 @@ def build_case_prompt(inc: dict, matches: List[dict], code_ctx: List[dict], cata
         region, budget.max_steps, budget.max_queries, budget.max_adhoc_sql))
     L.append("\nAnswer with your first action as ONE JSON object.")
     text = "\n".join(L)
-    if len(text) > max_chars:                       # shrink the least valuable parts first: catalog is kept whole
-        head, _, tail = text.partition("\n## QUERY TEMPLATE CATALOG")
-        text = head[:max_chars - len(tail) - 80] + "\n...[case file truncated]\n\n## QUERY TEMPLATE CATALOG" + tail
+    if len(text) > max_chars:                       # shrink the least valuable parts first: resolved/baseline/catalog are kept whole
+        head = "\n".join(L[:pinned_from])
+        tail = "\n".join(L[pinned_from:])
+        text = head[:max(2000, max_chars - len(tail) - 80)] + "\n...[case file truncated]\n" + tail
     return text

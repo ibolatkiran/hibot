@@ -367,6 +367,47 @@ Ayrıntılar: `hibot/agent/README.md`, `hibot/llm/README.md`. Sahte LLM ve DB ol
 
 **Performans sorunu:** `wo_field_changes` prod'da 30 sn'yi aşıyor (`HYT00`). Literal WO ID ile yazılmış basit `Log.WorkOrderJsonLog` sorgusu 1,7 sn'de dönüyor, yani yavaşlık şablonun yapısından veya parametre bağlamadan kaynaklanıyor. Düzeltme alt agent'ta.
 
+## 12. Temel sorgu setleri ve ticket penceresi izi (D13'ün uygulanması), 2026-10-16
+
+**Performans**
+- `wo_field_changes`'teki zaman aşımının kök sebebi: `WITH lang AS (… COALESCE(@LanguageId, (SELECT TOP 1 … Catalog.Tenant)))` CTE'si log tablosuyla cross join edilince optimizer `InxWorkOrderId` seek'ini terk ediyor. Parametre bağlama ve RECOMPILE denendi, sebep bunlar değildi.
+- Düzeltme: CTE kaldırıldı, `Catalog.Tenant tn` join'i ve APPLY'lar içinde `COALESCE(@LanguageId, tn.LanguageId)` kullanıldı → 0,9 sn.
+- ⚠️ Kural: **büyük log tablolarında `lang` CTE'si kullanma.**
+- Tüm şablonlar prod EU'da 8 sn'nin altında. En yavaşları: `outbound_queue_backlog` 5,2 sn, `workcase_tree` 4,8 sn. Tablo: `knowledge/queries/README.md`.
+
+**Yeni şablon:** `status_step_check(TenantId, FromStatusId, ToStatusId)` — "A → B geçişi bu tenant'ta tanımlı mı?" sorusunu cevaplar.
+
+**Temel sorgu setleri** (`hibot/agent/playbooks.py`, sadece live modda): ön adımdan sonra ve LLM'den önce deterministik olarak çalışır.
+
+| Ticket türü | Çalışan şablonlar |
+|---|---|
+| Statü / iptal / reddetme / kapatma | `wo_header`, `wo_status_timeline`, `wo_field_changes`, `wo_status_transition_check`, son değişiklik için `status_step_check` |
+| Entegrasyon | kendi seti |
+| Bildirim | kendi seti |
+| Ana veri | kendi seti |
+
+Bütçe: varsayılan `max_queries` 10, LLM'e her zaman 2 sorgu ayrılıyor. SM-2139009 için prompt 23,6k karakter.
+
+**Ticket penceresi** (`hibot/agent/ticket_window.py` → `report.ticket_window_changes`)
+- Zaman dilimleri: Jira `created` UTC+03:00 (3.790 XML ticket'ın hepsinde doğrulandı), `resolved` kendi offset'ini taşıyor, DB tarihleri UTC.
+- Pencere: −5 / +15 dk.
+- Manuel düzeltme sezgisi: JsonLog'daki statü değişikliğine karşılık gelen bir geçmiş satırı yoksa **medium**; buna ek olarak `UpdateUserId` de değişmemişse **high**.
+
+**Koruma:** statü, iptal veya hata içeren ve iş emri bilinen bir ticket'ta statü geçmişine bakılmadan verilen `final_report` bir kez geri çevriliyor (güven skoru yüksek olsa bile).
+
+**Canlı sonuçlar**
+- **SM-2139009** → `config` / 0,86 ✅ (run `20261016-191209-SM-2139009-08c0`). Koordinatörün manuel teşhisiyle birebir aynı: tenant 68'de StatusStep 329 → 314 yok; developer 17.09 11:41:11 UTC'de DB'den elle güncellemiş (high). Çözüm: StatusStep satırını eklemek ve tenant'ın iptal akışını gözden geçirmek. 7 sorgu, 2 LLM çağrısı, ~30 sn.
+- **SM-2122480** → `unknown` / 0,40 (run `…191148…e1ed`).
+  - Ticket penceresinde değişiklik yok. Mevcut statü 2271 (Financed), ama geçmiş 2284 (Beko Approved) ile bitiyor ve **2271 için geçmiş satırı yok**. Bu muhtemelen ticket'tan *önce* olmuş, akış dışı bir değişiklik (incelenmeli).
+  - Atlas tarafı bizim DB'de değil.
+
+**Kalan zayıflıklar**
+- Sadece EU'da test edildi.
+- ±5 dk eşleşme sezgisi yüzünden geçmiş satırı yazmayan job ve trigger'lar da "manuel düzeltme" diye işaretlenebilir.
+- Statü anahtar kelimeleri sadece TR ve EN.
+- Ana veri setleri için ülke → tenant eşlemesi belirsiz.
+- LLM bazen `status_step_check` bulgusunu `wo_status_transition_check`'e atfediyor.
+
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
 Önyüzün çağırdığı ama backend'de karşılığı olmayan **109 benzersiz çağrı** var, liste: `knowledge/codemap/trace_index.json` → `unmatched_frontend_calls`. Örnekler:

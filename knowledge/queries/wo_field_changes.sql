@@ -12,7 +12,6 @@ pii_sources: Dsc
 interpret: One row per UPDATE ordered by Id. ChangedFields lists every tracked column whose value differs between the old (Deleted) and new (Inserted) row image; only the most useful old/new pairs are returned (status, technician, shop, dates, warranty/reject, UpdateUserId = Employee id of the user who saved). An UPDATE that changes nothing tracked shows an empty ChangedFields. A burst of rows within seconds usually means a job or a retry loop. Rows with TenantId NULL are included. If there are no rows the trigger did not fire (order created in the same transaction, trigger disabled, or multi-row update which the trigger skips).
 next: wo_status_timeline, wo_status_updater_log, wo_header
 */
-WITH lang AS (SELECT COALESCE(@LanguageId, (SELECT TOP 1 t.LanguageId FROM Catalog.Tenant t WHERE t.Id = @TenantId)) AS Id)
 SELECT
     l.Id AS LogId, l.LogDate,
     JSON_VALUE(l.Deleted,'$[0].StatusId') AS OldStatusId, osn.FieldText AS OldStatusName,
@@ -74,16 +73,21 @@ SELECT
     + CASE WHEN ISNULL(JSON_VALUE(l.Deleted,'$[0].DistributorId'), '~') <> ISNULL(JSON_VALUE(l.Inserted,'$[0].DistributorId'), '~') THEN 'DistributorId, ' ELSE '' END
     + CASE WHEN ISNULL(JSON_VALUE(l.Deleted,'$[0].ExternalId'), '~') <> ISNULL(JSON_VALUE(l.Inserted,'$[0].ExternalId'), '~') THEN 'ExternalId, ' ELSE '' END
     + CASE WHEN ISNULL(JSON_VALUE(l.Deleted,'$[0].TaskTypeId'), '~') <> ISNULL(JSON_VALUE(l.Inserted,'$[0].TaskTypeId'), '~') THEN 'TaskTypeId, ' ELSE '' END AS ChangedFields
-FROM Log.WorkOrderJsonLog l
-CROSS JOIN lang
+FROM (
+    -- Seek on InxWorkOrderId FIRST. NOTE: a 'WITH lang AS (SELECT COALESCE(..., (SELECT ...)))' CTE cross-joined here made PROD time out (>30 s, 2026-10-16); the tenant language is joined as a plain table instead.
+    SELECT TOP 200 j.Id, j.WorkOrderId, j.LogDate, j.TenantId, j.Inserted, j.Deleted
+    FROM Log.WorkOrderJsonLog j
+    WHERE j.WorkOrderId = @WorkOrderId AND (j.TenantId = @TenantId OR j.TenantId IS NULL)
+    ORDER BY j.Id DESC
+) l
+LEFT JOIN Catalog.Tenant tn ON tn.Id = @TenantId
 LEFT JOIN Catalog.Status os ON os.Id = TRY_CAST(JSON_VALUE(l.Deleted,'$[0].StatusId') AS int)
 LEFT JOIN Catalog.Status ns ON ns.Id = TRY_CAST(JSON_VALUE(l.Inserted,'$[0].StatusId') AS int)
 LEFT JOIN Catalog.Employee ub ON ub.Id = TRY_CAST(JSON_VALUE(l.Inserted,'$[0].UpdateUserId') AS int)
     OUTER APPLY (SELECT TOP 1 e.FieldText FROM Catalog.AppTranslationEntry e
                 WHERE e.AppTranslationId = os.AppTranslationId
-                ORDER BY CASE WHEN e.LanguageId = lang.Id THEN 0 ELSE 1 END, e.LanguageId) osn
+                ORDER BY CASE WHEN e.LanguageId = COALESCE(@LanguageId, tn.LanguageId) THEN 0 ELSE 1 END, e.LanguageId) osn
     OUTER APPLY (SELECT TOP 1 e.FieldText FROM Catalog.AppTranslationEntry e
                 WHERE e.AppTranslationId = ns.AppTranslationId
-                ORDER BY CASE WHEN e.LanguageId = lang.Id THEN 0 ELSE 1 END, e.LanguageId) nsn
-WHERE l.WorkOrderId = @WorkOrderId AND (l.TenantId = @TenantId OR l.TenantId IS NULL)
+                ORDER BY CASE WHEN e.LanguageId = COALESCE(@LanguageId, tn.LanguageId) THEN 0 ELSE 1 END, e.LanguageId) nsn
 ORDER BY l.Id

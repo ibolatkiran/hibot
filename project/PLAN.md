@@ -45,7 +45,9 @@ Yeni ticket ──► [1] Varlık çıkarımı (WO no, ülke→tenant, uygulama,
 - ✅ Jira XML toplu indirici: tarayıcı snippet'i (3'erli) + `collect.py` (`tools/jira_export`)
 - ✅ Birleşik bilgi grafı: codemap ↔ şema, ileri ve ters izleme, hata metni araması (`tools/graph`, `hibot/knowledge`, 12 test)
 - ⏳ Jira XML ile zenginleştirme (export gelince `tools/incidents/build.py` tekrar çalıştırılır)
-- ⏳ **DB izinden öğrenme** (D13): kapanmış ticket'lar için açılış–kapanış aralığında ilgili iş emri ve kayıtlarda ne değiştiğini çıkar (`Log.WorkOrderJsonLog`, `WorkOrderGpsInfo`, audit) → "fiilen yapılan çözüm" etiketi. Gerekenler: prod DB + XML'deki resolved tarihleri.
+- ✅ Ön adım (`wo_locate` ile tenant çözümü), temel sorgu setleri, ticket penceresi izi (manuel DB düzeltmesi tespiti) — tek ticket için canlıda çalışıyor (FINDINGS §12)
+- ⬜ **DB izinden öğrenme, toplu çalıştırma** (D13): ticket penceresi analizini kapanmış ve iş emri olan tüm EU ticket'larına uygula → etiketli veri seti ("fiilen ne yapıldı") ve kart adayları.
+- ⏳ **DB izinden öğrenme** (D13, orijinal madde): kapanmış ticket'lar için açılış–kapanış aralığında ilgili iş emri ve kayıtlarda ne değiştiğini çıkar (`Log.WorkOrderJsonLog`, `WorkOrderGpsInfo`, audit) → "fiilen yapılan çözüm" etiketi. Gerekenler: prod DB + XML'deki resolved tarihleri.
 - ⏳ Bilinen Sorun Kartları v1: en büyük ~30 tekrar eden grup için kod haritası, şema ve DB izi üzerinden taslak kart; developer bir kez ✅/❌ verir → `knowledge/cards/`. Jira yorumlarına **güvenilmez** (D13).
 
 ### Faz 2: MVP teşhis agent'ı
@@ -68,8 +70,9 @@ Yeni ticket ──► [1] Varlık çıkarımı (WO no, ülke→tenant, uygulama,
 - ⬜ Proaktif izleme: `SiriusInt.JobRunLog`, `Gateway.*` hataları, `ErpDocument.ErrorDescription`, `Log.DB_Errors` artışları
 
 ## Sıradaki iş (bir sonraki agent için)
-1. **Kullanıcı `.env`'i doldurunca** (`.env.example` şablonu; dosyayı ASLA okuma veya yazdırma):
-   - `python -m hibot.llm.probe`: yanıt şeklini gör. `_parse_argpt` gerekirse sadeleştir. JSON talimatına uyuluyor mu? Gerekirse maxTokens sınırını ayarla.
-   - `python -m hibot.db.probe --region EU`: login gerçekten read-only mı (yazma yetkisi varsa DUR ve kullanıcıya bildir)? `tenant_lookup` çalışıyor mu?
-2. İkisi de geçince: `python -m hibot analyze SM-1777386 --llm http --live`. İlk gerçek analizi değerlendir ve prompt'ları ayarla. Ardından FINDINGS §8'deki DB varsayımlarını doğrula.
+Durum: ArGPT ve EU prod (read-only) bağlı, canlı analiz çalışıyor (FINDINGS §11–12). APAC DB yok.
+1. **Kullanıcı onayı:** SM-2139009 teşhisi (tenant 68'de StatusStep 329 → 314 eksik) doğru mu? Doğruysa `python -m hibot feedback 20261016-191209-SM-2139009-08c0 --verdict correct` → **ilk gerçek kart**.
+2. **Tekrar tespiti:** benzer ZA ticket'larını bul ("cancel", "No Proof or Money", tenant 68) → aynı kök neden mi?
+3. **Toplu DB izi:** kapanmış ve iş emri olan EU ticket'larında ticket penceresi analizini toplu çalıştır (LLM'siz, deterministik), sonuçları `knowledge/learning/` altına yaz, manuel düzeltme kalıplarını grupla → kart adayları.
+4. Değerlendirme seti: 30–50 ticket ve beklenen sınıflandırma.
 4. **Bağımsız işler (beklemeden yapılabilir):** (a) "DB izinden öğrenme" modülünün tasarımı ve kodu (D13), DB gelince çalışır; (b) en büyük ~30 grup için taslak kart üretimi (LLM gelince); (c) değerlendirme seti: elle seçilmiş 30–50 ticket ve beklenen sınıflandırma.

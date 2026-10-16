@@ -8,12 +8,13 @@ When the steps run out the LLM is asked once for a forced final_report; if that 
 from __future__ import annotations
 
 import json
+import re
 from typing import Callable, Dict, List, Optional
 
 from hibot.llm.client import LLMClient, LLMError
 from hibot.llm.jsonio import JsonRepairFailed, complete_json
 
-from . import actions, config
+from . import actions, config, playbooks, ticket_window
 from .executor import Executor
 from .prompting import build_case_prompt
 from hibot import prompts
@@ -24,7 +25,7 @@ NO_QUERY_CONF_CAP = 0.6
 class Investigation:
     def __init__(self, llm: LLMClient, incident: dict, matches: List[dict], code_ctx: List[dict], executor: Executor,
                  *, budget: Optional[config.Budget] = None, system_prompt: Optional[str] = None,
-                 on_step: Optional[Callable[[dict], None]] = None, resolved_text: str = ""):
+                 on_step: Optional[Callable[[dict], None]] = None, resolved_text: str = "", baseline_text: str = ""):
         self.llm, self.inc, self.matches, self.executor = llm, incident, matches, executor
         self.budget = budget or executor.budget
         self.system = system_prompt or prompts.system_prompt()
@@ -36,7 +37,8 @@ class Investigation:
         self.early_stop_used = False
         catalog = executor.registry.catalog_text(executor.region)
         self.case_prompt = build_case_prompt(incident, matches, code_ctx, catalog, mode=executor.mode,
-                                             region=executor.region, budget=self.budget, resolved=resolved_text)
+                                             region=executor.region, budget=self.budget, resolved=resolved_text,
+                                             baseline=baseline_text)
 
     # ------------------------------------------------------------ prompts
     def _messages(self, tail: Optional[str] = None) -> List[Dict[str, str]]:
@@ -85,9 +87,10 @@ class Investigation:
         try:
             for n in range(1, self.budget.max_steps + 1):
                 act = self._ask()
+                shallow = act["action"] == "final_report" and self._status_shallow()
                 if act["action"] == "final_report" and self._premature(act, n):
                     self.early_stop_used = True                    # once per run
-                    self._log_step(n, act, self._early_stop_text(), False)
+                    self._log_step(n, act, self._early_stop_text(shallow), False)
                     continue
                 if act["action"] == "final_report":
                     report = actions.split_report(act)
@@ -116,7 +119,9 @@ class Investigation:
         """Weak conclusion (unknown / confidence < 0.4) with at least half of the query budget unused and steps left."""
         if self.early_stop_used or n >= self.budget.max_steps:
             return False
-        if self.executor.query_count * 2 >= self.budget.max_queries:
+        if self._status_shallow():
+            return True
+        if self.budget.max_queries - self.executor.query_count < 3:
             return False
         try:
             conf = float(act.get("confidence", 0))
@@ -124,7 +129,31 @@ class Investigation:
             conf = 0.0
         return act.get("classification") == "unknown" or conf < 0.4
 
-    def _early_stop_text(self) -> str:
+    def _status_shallow(self) -> bool:
+        """Ticket talks about a status / cancel / error, a work order is known, but no query looked at status history or
+        transitions (baseline playbook queries count) and query budget is left."""
+        if self.executor.query_count >= self.budget.max_queries:
+            return False
+        if not playbooks.is_status_ticket(self.inc, playbooks.GUARD_RE):
+            return False
+        ents = self.inc.get("entities") or {}
+        if not (ents.get("work_order_ids") or ents.get("work_order_ids_strong") or ents.get("work_case_ids")):
+            return False
+        dry = self.executor.mode != "live"
+        for q in self.executor.queries:
+            touched = q["query_id"] in playbooks.STATUS_QIDS or (
+                q["query_id"] == "adhoc" and re.search(r"WorkOrderGpsInfo|WorkOrderJsonLog|StatusStep", q.get("sql") or "", re.I))
+            if touched and (q.get("executed") or dry):
+                return False
+        return True
+
+    def _early_stop_text(self, shallow: bool = False) -> str:
+        if shallow:
+            return ("EARLY STOP REFUSED (once): the ticket is about a status / cancel / error, but no executed query has looked at the "
+                    "status history or the allowed transitions. Before concluding run wo_status_timeline, wo_field_changes (who/when "
+                    "changed the status, incl. direct DB updates) and wo_status_transition_check / status_step_check "
+                    "(is the transition configured for the tenant?) with the TenantId from RESOLVED WORK ORDERS. "
+                    "A work order that is already in the requested status does NOT prove user_error: find out how it got there.")
         zero = [q for q in self.executor.queries if q.get("executed") and q.get("row_count") == 0]
         tips = ["%s returned 0 rows (params %s): try another identifier (wo_locate, ExternalId), the other region, or a related template"
                 % (q["query_id"], json.dumps(q.get("params") or {}, ensure_ascii=False)) for q in zero]
@@ -169,10 +198,17 @@ class Investigation:
         for q in self.executor.queries:
             by_id.setdefault(q["query_id"], []).append(q)
         evid = []
-        for ev in rep.get("evidence") or []:
+        tw = ticket_window.compute(self.inc, self.executor.queries)
+        evidence = list(rep.get("evidence") or [])
+        if tw:
+            rep["ticket_window_changes"] = {k: v for k, v in tw.items() if k != "evidence_text"}
+            evidence.insert(0, {"type": "query", "ref": "wo_field_changes", "finding": tw["evidence_text"], "deterministic": True})
+        for ev in evidence:
             ev = dict(ev)
             if ev.get("type") == "query":
                 ref = str(ev.get("ref", "")).split()[0] if ev.get("ref") else ""
+                if str(ev.get("ref", "")).lower().startswith(("ticket s", "ticket_window")):
+                    ref = "wo_field_changes"                    # the model cited the deterministic ticket-window section
                 qs = by_id.get(ref)
                 if not qs:
                     ev["status"] = "not_run"

@@ -110,7 +110,7 @@ def from_jira_key(key: str, extra_text: str = "") -> dict:
         "company_code": rec.get("company_code"), "language": rec.get("language"),
         "region_guess": region_guess(rec.get("country"), rec.get("company_code")),
         "screen_hints": rec.get("screen_hints") or [], "status": rec.get("status"), "created": rec.get("created"),
-        "resolution": rec.get("resolution"), "similar": similar, "group": group,
+        "resolved": rec.get("resolved"), "resolution": rec.get("resolution"), "similar": similar, "group": group,
     }
 
 

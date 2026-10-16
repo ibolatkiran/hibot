@@ -451,7 +451,7 @@ class TemplateRegistry:
             reg = "" if len(t.regions) == len(REGIONS) else " (%s only)" % "/".join(t.regions)
             line = "- %s%s: %s" % (t.id, reg, t.title)
             if with_purpose:
-                line += " - " + t.purpose
+                line += " - " + _short(t.purpose)
             lines.append(line)
             lines.append("    params: %s%s" % (ps, any_of))
         return "\n".join(lines)
@@ -463,6 +463,15 @@ class TemplateRegistry:
             "%s - %s" % (t.id, t.title), "purpose: " + t.purpose,
             "params: " + ", ".join("%s (%s) %s" % (p.name, p.type, p.description) for p in t.params),
             "interpret: " + t.interpret, "next: " + ", ".join(t.next)])
+
+
+def _short(text: str, n: int = 190) -> str:
+    """First sentence(s) of a purpose text, at most n chars (keeps the prompt catalog compact)."""
+    if len(text) <= n:
+        return text
+    cut = text[:n]
+    stop = max(cut.rfind(". "), cut.rfind("; "))
+    return (cut[:stop + 1] if stop > n // 2 else cut.rsplit(" ", 1)[0] + " ...").strip()
 
 
 def _canon(t: Template, order: Sequence[str]) -> List[str]:

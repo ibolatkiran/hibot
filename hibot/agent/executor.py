@@ -197,7 +197,7 @@ class Executor:
         if not res.ok:
             return {"ok": False, "record": rec, "text": "%s FAILED (not executed successfully): %s" % (head, res.error)}
         rec.update(executed=True, row_count=res.row_count, truncated=res.truncated, columns=list(res.columns),
-                   rows=[[_jsonable(c) for c in r] for r in res.rows[:50]])
+                   rows=[[_jsonable(c) for c in r] for r in res.rows[:200]])
         b = self.budget
         lines = ["%s EXECUTED, %d rows%s, %d ms (values masked)" % (head, res.row_count, " (truncated by row limit)" if res.truncated else "", res.elapsed_ms),
                  "columns: " + " | ".join(res.columns)]

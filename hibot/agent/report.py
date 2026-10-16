@@ -85,6 +85,10 @@ def render_markdown(run: Dict[str, Any]) -> str:
         q = by_no.get(ev.get("query_no"))
         if q:
             L.extend(_query_block(q))
+    tw = rep.get("ticket_window_changes")
+    if tw and tw.get("text"):
+        L.append("")
+        L.append(tw["text"])
     L.append("")
     L.append("## Çalıştırılan sorgular")
     if queries:

@@ -73,7 +73,7 @@ confirmed +0.05, rejected never). Two clearly marked EXAMPLE draft cards ship in
 | budget | default | on exhaustion |
 |---|---|---|
 | actions (steps) | 8 | one forced `final_report` request; invalid -> fallback report (`unknown`, confidence 0) |
-| queries (`run_query` + `run_sql` that pass validation) | 6 | further queries are REJECTED observations |
+| queries (`run_query` + `run_sql` that pass validation; preflight + baseline playbook + LLM) | 10 | further queries are REJECTED observations |
 | ad-hoc SQL | 2 | REJECTED observation |
 | prompt chars | 60 000 | older observations shortened (600 -> 250 -> 100 chars); newest two kept |
 | observation | 4 000 chars, 15 rows, 160 chars/cell, 120 source lines | truncated with a marker |
@@ -90,6 +90,28 @@ Identical repeated actions are not re-executed ("DUPLICATE"). Rejected actions c
 * Early-stop guard (`Investigation._premature`): a `final_report` with classification `unknown` or confidence < 0.4 while
   fewer than half of `max_queries` were used and steps remain is refused ONCE per run; the LLM gets an observation with
   concrete suggestions (queries that returned 0 rows -> other identifier/region/template). It costs one step.
+  Weak = unknown / confidence < 0.4 with at least 3 queries of budget left.
+* Shallow-status guard (same once-per-run allowance): the ticket mentions a status / cancel / error, a work order is known, and no executed
+  query (baseline included) touched `wo_status_timeline` / `wo_field_changes` / `wo_status_transition_check` / `status_step_check`
+  (or ad-hoc SQL on WorkOrderGpsInfo / WorkOrderJsonLog / StatusStep) -> even a confident final_report is refused once.
+
+## Baseline playbooks (`playbooks.py`, live mode only)
+After preflight, deterministic queries run before the LLM (counted in the query budget; `RESERVE`=2 queries always stay for the LLM):
+* status / cancel / reject / close / "cannot change status" keywords (any problem_type) + resolved WO: `wo_header`, `wo_status_timeline`,
+  `wo_field_changes`, `wo_status_transition_check`, then `status_step_check` for the last status change found in the ticket window;
+* `integration_failure`: `wo_header`, `wo_erp_sap`, `sap_rfc_rest_calls`; `notification_failure`: `wo_header`, `notifications_for_wo`;
+* `master_data_request` with a SKU and no WO: `tenant_lookup` (ticket country) then `product_sku_lookup` if exactly one tenant matches.
+Each observation is compacted (row caps, newest rows kept, `OBS_CAP` 1500 chars) into the "BASELINE EVIDENCE" case-file section, which is
+never truncated. SM-2139009 case prompt: ~23.6k chars (system 9.8k + case file); catalog purposes are shortened to ~190 chars.
+
+## Ticket-window footprint (`ticket_window.py`, D13)
+From `wo_field_changes` + `wo_status_timeline` and the ticket `created`/`resolved` times: what changed on the WO between ticket creation
+and resolution (window -5 / +15 min). Time zones: ticket `created` = Jira local UTC+03:00 (verified against the raw XML, 3790/3790),
+`resolved` carries its offset, DB datetimes are UTC. A status change in `Log.WorkOrderJsonLog` without a matching
+`Operation.WorkOrderGpsInfo` row (+-5 min) is a suspected MANUAL DB FIX (`high` when `UpdateUserId` also did not change, `medium` otherwise).
+Injected into the case file ("Ticket süresince iş emrinde olan değişiklikler"), added as a deterministic first evidence item, rendered in
+report.md and stored in report.json as `report.ticket_window_changes` (raw material for cards later). Recomputed at report time from all
+executed queries, so it also works when the LLM ran the queries itself.
 
 ## Safety rules
 * DB only through `hibot.db` (templates preferred; ad-hoc SQL via `safe_sql.validate`, PII columns refused, `TOP` injected). The agent has
@@ -106,7 +128,7 @@ Identical repeated actions are not re-executed ("DUPLICATE"). Rejected actions c
 
 ## Files
 `intake.py` `cards.py` `code_context.py` `prompting.py` `actions.py` `executor.py` `safety.py` `investigate.py` `report.py` `store.py`
-`feedback.py` `pipeline.py` (glue) `demo.py` (FakeLLM scenario) `config.py`. CLI: `hibot/__main__.py`.
+`feedback.py` `playbooks.py` `ticket_window.py` `pipeline.py` (glue) `demo.py` (FakeLLM scenario) `config.py`. CLI: `hibot/__main__.py`.
 
 ## Not done / next
 * Real endpoint adapter and prompt tuning (needs the endpoint docs); embeddings for similarity (D10).

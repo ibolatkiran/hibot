@@ -73,7 +73,8 @@ SELECT ...
 | `wo_status_timeline` | EU, APAC | status history with names, previous status, gaps |
 | `wo_history_function` | EU, APAC | `dbo.GetSiriusWorkOrderHistory` vs raw rows ("history shows 1 record") |
 | `wo_field_changes` | EU, APAC | which fields changed when (Log.WorkOrderJsonLog) |
-| `wo_status_transition_check` | EU, APAC | allowed next statuses (StatusStep / StatusTenant) |
+| `wo_status_transition_check` | EU, APAC | allowed next statuses of the CURRENT status (StatusStep / StatusTenant) |
+| `status_step_check` | EU, APAC | is transition FromStatusId -> ToStatusId configured for the tenant? (manual-DB-fix follow-up) |
 | `wo_status_updater_log` | EU | automatic status changes + updater rules |
 | `workcase_tree` | EU, APAC | case with all its work orders, cancellation |
 | `wo_lines_totals` | EU, APAC | detail lines vs header totals |
@@ -93,3 +94,44 @@ SELECT ...
 | `product_sku_lookup` | EU, APAC | SKU exists? assigned to tenant? |
 | `tenant_lookup` | EU, APAC | tenant by country / name |
 | `user_access_lookup` | EU, APAC | user, tenant membership, employee, role (no credentials) |
+
+## Live timings (PROD EU, 2026-10-16, SQL login read-only, 40 s timeout)
+
+Rows / elapsed ms per template. Samples: WO 22811628 (tenant 68, ZA) and WO 22197255 (tenant 70, EG). All templates are < 8 s.
+
+| template | params | rows (68 / 70) | ms (68 / 70) |
+|---|---|---|---|
+| wo_header | TenantId, WorkOrderId | 1 / 1 | 2465 / 793 |
+| wo_status_timeline | TenantId, WorkOrderId | 3 / 16 | 329 / 498 |
+| wo_history_function | TenantId, WorkOrderId | 3 / 14 | 321 / 321 |
+| wo_field_changes | TenantId, WorkOrderId | 13 / 41 | 899 / 829 |
+| wo_status_transition_check | TenantId, WorkOrderId | 1 / 1 | 403 / 287 |
+| status_step_check | TenantId=68, FromStatusId=329, ToStatusId=314 | 4 | 1829 |
+| wo_status_updater_log | TenantId, WorkOrderId | 1 / 1 | 471 / 290 |
+| wo_lines_totals | TenantId, WorkOrderId | 1 / 5 | 344 / 291 |
+| wo_discount_log | TenantId, WorkOrderId | 0 / 0 | 270 / 193 |
+| wo_erp_sap | TenantId, WorkOrderId | 0 / 1 | 321 / 312 |
+| material_orders | TenantId, WorkOrderId | 0 / 0 | 397 / 283 |
+| wo_debug_log | TenantId, WorkOrderId | 0 / 0 | 326 / 296 |
+| mobile_api_trace | TenantId, WorkOrderId | 0 / 0 | 2496 / 735 |
+| notifications_for_wo | TenantId, WorkOrderId | 1 / 1 | 405 / 226 |
+| technician_appointment_context | TenantId, WorkOrderId | 1 / 73 | 392 / 214 |
+| workcase_tree | TenantId, WorkOrderId | 1 / 1 | 4801 / 3579 |
+| sap_rfc_rest_calls | TenantId, IdValue=WO id | 0 / 0 | 1223 / 1551 |
+| db_errors_for_wo | WorkOrderId | 0 / 0 | 1244 / 1400 |
+| wo_locate | Number=22811628 | 1 | 2195 |
+| tenant_lookup | CountryCode=ZA / TenantId=68 | 1 / 1 | 332 / 306 |
+| product_sku_lookup | TenantId=68, Sku (a tenant-68 SKU) | 1 | 2363 |
+| user_access_lookup | UserCode (a tenant-68 technician code), TenantId=68 | 0 | 293 |
+| db_errors_recent | (defaults) | 8 | 1429 |
+| db_errors_list | ErrorProcedure=Update | 100 | 1134 |
+| outbound_queue_backlog | (defaults) | 4 | 5163 |
+| job_health | (defaults) | 1 | 550 |
+
+### Performance lesson (wo_field_changes timed out, fixed)
+`WITH lang AS (SELECT COALESCE(@LanguageId, (SELECT TOP 1 ... FROM Catalog.Tenant ...)) AS Id)` cross-joined to a
+`Log.WorkOrderJsonLog` derived table made the optimizer abandon the `InxWorkOrderId` seek (>30 s, HYT00).
+Parameter binding was NOT the cause (ints are bound as ints; `OPTION (RECOMPILE)` did not help). Fix: no `lang` CTE in
+templates that read big log tables; join `Catalog.Tenant tn ON tn.Id = @TenantId` and use `COALESCE(@LanguageId, tn.LanguageId)`
+inside the `OUTER APPLY` ordering (0.9 s). The log filter (WorkOrderId + tenant predicate) lives inside the derived table.
+Other templates still use the `lang` CTE but only over small, tenant-keyed tables and are fast (table above).

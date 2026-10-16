@@ -38,6 +38,7 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
     - DB probu: önce `IM002` / `08001` hataları alındı (bağlantı dizesinde `Driver=` eksikti), normalleştirme ile çözüldü. Login read-only doğrulandı.
     - Ek düzeltmeler: unittest altında `.env` yüklenmiyor (bir CLI testi `--live` ile prod'a gidebiliyordu); runner artık `pyodbc`'yi import etmiyor.
 18. **İlk canlı analiz** (SM-2122480) yanlış tenant ile erken pes etti. Koordinatör `wo_locate` şablonunu yazdı; WO'nun tenant 70 (Egypt) altında olduğunu buldu. → FINDINGS §11.
-19. Devam eden (Sonnet): deterministik `wo_locate` ön adımı, prompt kuralları, erken durma koruması, testler, SM-2122480 ve SM-2139009 ile canlı doğrulama.
+19. Ön adım, prompt kuralları ve erken durma koruması (Sonnet, `325ec35`). Canlı çalıştırmada SM-2139009 "user_error" çıktı; koordinatör prod'da elle teşhis etti (FINDINGS §11): manuel DB düzeltmesi + eksik StatusStep 329 → 314.
+20. Şablon performansı, temel sorgu setleri, ticket penceresi izi, yüzeysel teşhis koruması (Sonnet). Koordinatör denetimi: 329 test geçiyor; SM-2139009 raporu manuel teşhisle birebir (`config` / 0,86). → FINDINGS §12.
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.
