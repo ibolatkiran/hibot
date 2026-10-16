@@ -351,7 +351,21 @@ Ayrıntılar: `hibot/agent/README.md`, `hibot/llm/README.md`. Sahte LLM ve DB ol
 **Dersler**
 - ⚠️ **Ticket'taki ülke, ticket'ı açanın ülkesi; iş emrinin tenant'ı değil.** Ülke kodu `tr` başka bir tenant'la da eşleşiyor. → Tenant her zaman iş emrinden öğrenilmeli.
 - Eski şablonlar `TenantId`'yi zorunlu tutuyordu, yani tenant bilinmeden iş emri bulunamıyordu. → Yeni **`wo_locate`** şablonu: birincil anahtar veya harici ID ile tüm tenant'larda arar. Tenant kuralının bilinçli tek istisnası; testte `CROSS_TENANT_LOCATORS` olarak işaretli.
-- LLM 0 satırı "bulunamadı" sonucu sayıp erken durdu. → Deterministik `wo_locate` ön adımı, prompt kuralları ve erken durma koruması eklenecek (alt agent'ta).
+- LLM 0 satırı "bulunamadı" sonucu sayıp erken durdu. → Deterministik `wo_locate` ön adımı, prompt kuralları ve erken durma koruması eklendi (`325ec35`).
+
+**Ön adım sonrası canlı çalıştırmalar (Sonnet doğruladı)**
+- SM-2122480 → tenant 70 doğru bulundu. Sirius'ta `Financed(Accounted)`, ERP dokümanı "SAP'ye gönderildi". Atlas tarafı bizim DB'de yok, dolayısıyla `unknown` / 0,55 dürüst bir sonuç.
+- SM-2139009 → `user_error` / 0,78 ("zaten iptal edilmiş") — **YANLIŞ**, çünkü yüzeysel kaldı. Koordinatörün manuel teşhisi aşağıda.
+
+**SM-2139009: DB izinden gerçek kök neden (D13'ün ilk kanıtı)**
+- Ticket: ZA, "Job 22811628 iptal edilemiyor, hata veriyor; statü *No Proof or Money*". Açılış 17.09 08:58, kapanış 17.09 14:42 (+03:00). Tek yorum: "resolved".
+- `wo_status_timeline` (tenant 68): son geçmiş satırı 04.08 "No Proof or Money" (329). **Cancelled (314) için geçmiş satırı yok.**
+- `Log.WorkOrderJsonLog`: **17.09 11:41:11'de 329 → 314**, ticket kapanmadan 1 dakika önce. `UpdateUserId` önceki değerinde kaldı (17970).
+  → Uygulama akışı (geçmiş satırı ve kullanıcı güncellemesi) bypass edilmiş; **developer doğrudan DB'de güncellemiş**.
+- `Catalog.StatusStep` (tenant 68): 329'dan izin verilen geçişler sadece 312, 315, 319 ve 335. **329 → 314 tanımlı değil.** Tenant 68'de 314'e giden hiçbir StatusStep satırı da yok.
+- **Kök neden adayı:** tenant 68'de "No Proof or Money" statüsündeki işler UI'dan iptal edilemiyor. Workaround elle DB güncellemesi; kalıcı çözüm StatusStep'e 329 → 314 eklemek veya bunun bilinçli bir kısıt olduğunu teyit etmek. → **Bilinen sorun kartı adayı.** Benzer ZA ticket'ları taranmalı.
+
+**Performans sorunu:** `wo_field_changes` prod'da 30 sn'yi aşıyor (`HYT00`). Literal WO ID ile yazılmış basit `Log.WorkOrderJsonLog` sorgusu 1,7 sn'de dönüyor, yani yavaşlık şablonun yapısından veya parametre bağlamadan kaynaklanıyor. Düzeltme alt agent'ta.
 
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
