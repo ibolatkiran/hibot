@@ -65,6 +65,13 @@ def render_markdown(run: Dict[str, Any]) -> str:
     L.append(rep.get("summary", ""))
     L.append("")
     L.append("**Sınıflandırma:** %s" % CLASS_TR.get(rep.get("classification"), rep.get("classification")))
+    mcd = rep.get("matched_card")
+    if mcd:
+        L.append("")
+        L.append("**Eşleşen kart:** `%s` (%s), doğrulama: **%s** (skor %.2f; %s)" % (
+            mcd["card_id"], mcd["card_status"], mcd["verdict_tr"], mcd["score"], "; ".join(mcd["reasons"])))
+        for d in mcd.get("details") or []:
+            L.append("- " + d)
     L.append("")
     L.append("## Kök neden")
     L.append(rep.get("root_cause", ""))

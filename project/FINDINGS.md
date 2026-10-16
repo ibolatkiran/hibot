@@ -447,6 +447,41 @@ Ayrıntılar: `knowledge/learning/summary.md`. Deterministik çalışır, LLM ku
 - Pencere payları sezgisel; takip edilmeyen tablolardaki düzeltmeler iz bırakmıyor.
 - Ticket'taki numara başka bir iş emrine ait olabilir.
 
+## 14. Kart incelemesi ve kartla analiz ("bilinen sorun kısa yolu"), 2026-10-16
+
+**CLI:** `python -m hibot cards list | show | confirm | reject | annotate` (`hibot/agent/cardcli.py`).
+- `confirm` güveni max(mevcut, 0,85) yapar.
+- Her işlem `history`'ye `who: "user"` olarak yazılır.
+
+**Şemaya eklenenler**
+- `classification`
+- `state_signature`: `{tenant_id, from_status_id, to_status_id, …, target_words[], transition_configured}`. `mine_patterns.py` artık bunu da üretiyor; mevcut taslaklar migrasyonla güncellendi.
+
+**D17 uygulandı:** `draft_footprint_t70_2271_to_2257` → **confirmed**, `user_error`, Türkçe kök neden ve 3 çözüm adımı. İlk onaylı kart.
+
+**Eşleşme** (`hibot/agent/known_issue.py`, sadece live modda, ön adım ve temel sorgu setinden sonra)
+
+| Sinyal | Puan |
+|---|---|
+| Tenant eşleşmesi (zorunlu) | 0,40 |
+| İş emrinin **ticket açıldığı andaki statüsü** = from | 0,35 |
+| Ticket metninde hedef kelime geçiyor | 0,25 |
+| Kart onaylı | +0,05 |
+
+- Eşik 0,65; son iki sinyalden en az biri şart. Ticket açıldığı andaki statü, değişiklik logu geriye sarılarak hesaplanıyor.
+- Eşleşen kartın doğrulama sorguları LLM'den önce çalışıyor; sonuç "destekliyor / çelişiyor / doğrulanamadı".
+- Kart onaylı ve doğrulama destekliyorsa rapor kartın sınıflandırma, kök neden ve çözüm adımlarını aynen kullanıyor. LLM'in eklemeleri "[LLM ek önerisi]" etiketiyle ekleniyor; geçmişte elle zorlama yapıldıysa "SÜREÇ İHLALİ" satırı çıkıyor.
+
+**Canlı sonuçlar** (ikisi de geliştirme setinden, yani bunlar bir isabet ölçümü değil)
+- **SM-2139002** (ZA) → taslak t68 kartıyla eşleşti (skor 1,00), doğrulama destekliyor → `config` / 0,90. Run `20261016-201636-SM-2139002-657b`.
+- **SM-2126600** (Egypt) → **onaylı** t70 kartıyla eşleşti (skor 1,00; açılıştaki statü 2271, sonraki 4 değişiklik geri sarıldı), doğrulama destekliyor → `user_error` / 0,90, kartın adımları aynen kullanıldı, SÜREÇ İHLALİ işaretlendi. Run `20261016-201713-SM-2126600-b628`.
+
+**Zayıflıklar**
+- Onaylı kartta LLM eklemeleri ve "Ek bulgular (LLM)" paragrafı çok uzun.
+- LLM var olmayan bir kanıt referansı uydurdu (grounding bunu "çalıştırılmadı" diye işaretledi).
+- Egypt 2257 ve 2260 kartları hedef kelime geçmeyen bir ticket'ta berabere kalır.
+- Kart ID'si onaylandıktan sonra da `draft_` önekini taşıyor (kozmetik).
+
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
 Önyüzün çağırdığı ama backend'de karşılığı olmayan **109 benzersiz çağrı** var, liste: `knowledge/codemap/trace_index.json` → `unmatched_frontend_calls`. Örnekler:

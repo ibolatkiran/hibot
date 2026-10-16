@@ -11,6 +11,13 @@ Card file: knowledge/cards/<id>.json
         "keywords": ["missing tenant", "sku"],             # folded, matched as substrings of the ticket text
         "entity_requirements": ["sku_codes"]               # entity lists (ticket.entities) that must be non-empty
       },
+      "classification": "user_error" | ... | null,           # optional: same values as final_report.classification (reviewer / reports)
+      "state_signature": {                                 # optional: status-transition cards (state-based matching, known_issue.py)
+        "tenant_id": 70, "from_status_id": 2271, "to_status_id": 2257,
+        "from_status_name": "...", "to_status_name": "...",
+        "target_words": ["transfer"],                      # folded words of the action the user wants (substring match on the ticket text)
+        "transition_configured": false                     # what the card claims about Catalog.StatusStep (null = unknown)
+      },
       "root_cause": "...",
       "verification_queries": [{"query_id": "product_sku_lookup",
                                  "params_from_entities": {"Sku": "entities.sku_codes[0]", "TenantId": "$tenant"}}],
@@ -34,9 +41,10 @@ import os
 import re
 import unicodedata
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from . import config
+from .actions import CLASSIFICATIONS
 
 STATUSES = ("draft", "confirmed", "rejected")
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{2,63}$")
@@ -53,6 +61,12 @@ CARD_SCHEMA: Dict[str, Any] = {
             "problem_type": {"type": ["string", "null"]}, "app": {"type": ["string", "null"]},
             "keywords": {"type": "array", "items": {"type": "string"}},
             "entity_requirements": {"type": "array", "items": {"type": "string"}}}},
+        "classification": {"type": ["string", "null"], "enum": [None, *CLASSIFICATIONS]},
+        "state_signature": {"type": "object", "required": ["tenant_id", "from_status_id", "to_status_id"], "properties": {
+            "tenant_id": {"type": "integer"}, "from_status_id": {"type": "integer"}, "to_status_id": {"type": "integer"},
+            "from_status_name": {"type": ["string", "null"]}, "to_status_name": {"type": ["string", "null"]},
+            "target_words": {"type": "array", "items": {"type": "string"}},
+            "transition_configured": {"type": ["boolean", "null"]}}},
         "root_cause": {"type": "string", "minLength": 3},
         "verification_queries": {"type": "array", "items": {"type": "object", "required": ["query_id"], "properties": {
             "query_id": {"type": "string"}, "params_from_entities": {"type": "object"}}}},
@@ -207,3 +221,74 @@ def resolve_card_queries(card: dict, inc: dict) -> List[dict]:
                 params[name] = val
         res.append({"query_id": q["query_id"], "params": params, "unresolved": unresolved})
     return res
+
+
+# ------------------------------------------------------- state signature (status-transition cards)
+
+_TW_STOP = set("status change order work with from that this have please sirius statu degistir".split())
+_NAMES_RE = re.compile(r"status (\d+) \((.*?)\) -> (\d+) \((.*?)\) is ")
+
+
+def target_words(to_name: Optional[str], summaries: Iterable[str] = ()) -> List[str]:
+    """Folded words that tell the user wants to reach the target status: the to-status name (+ its >=5 char tokens as 6-char
+    prefixes, so 'Cancelled' also hits 'cancel') and words shared by at least half of the evidence ticket summaries."""
+    out: List[str] = []
+
+    def add(w: str) -> None:
+        if w and w not in out:
+            out.append(w)
+    name = fold(to_name or "").strip()
+    if len(name) >= 4:
+        add(name)
+    for tok in re.findall(r"[a-z0-9]{5,}", name):
+        add(tok[:6])
+    sums = [set(re.findall(r"[a-z0-9]{5,}", fold(x))) for x in summaries if x]
+    if len(sums) >= 2:
+        for tok in sorted({t for t in set.union(*sums) if sum(t in x for x in sums) * 2 >= len(sums)}):
+            if tok not in _TW_STOP:
+                add(tok)
+    return out[:8]
+
+
+def build_state_signature(tenant_id: int, from_id: int, to_id: int, from_name: Optional[str] = None, to_name: Optional[str] = None,
+                          transition_configured: Optional[bool] = None, summaries: Iterable[str] = ()) -> dict:
+    return {"tenant_id": int(tenant_id), "from_status_id": int(from_id), "to_status_id": int(to_id),
+            "from_status_name": (from_name or "").strip() or None, "to_status_name": (to_name or "").strip() or None,
+            "target_words": target_words(to_name, summaries), "transition_configured": transition_configured}
+
+
+def derive_state_signature(card: dict, summaries: Iterable[str] = ()) -> Optional[dict]:
+    """state_signature of a footprint card from its status_step_check constants (+ names / claim from the root cause text)."""
+    for q in card.get("verification_queries") or []:
+        if q.get("query_id") != "status_step_check":
+            continue
+        p = q.get("params_from_entities") or {}
+        try:
+            vals = [p[k]["const"] for k in ("TenantId", "FromStatusId", "ToStatusId")]
+            t, f, to = (int(v) for v in vals)
+        except (KeyError, TypeError, ValueError):
+            continue
+        rc = card.get("root_cause") or ""
+        m = _NAMES_RE.search(rc)
+        fn, tn = (m.group(2), m.group(4)) if m and int(m.group(1)) == f and int(m.group(3)) == to else (None, None)
+        conf = False if "NOT configured" in rc else (True if " is configured" in rc else None)
+        return build_state_signature(t, f, to, fn, tn, conf, summaries)
+    return None
+
+
+def migrate_state_signatures(directory: Optional[Path] = None, tickets: Optional[Dict[str, dict]] = None) -> List[str]:
+    """Add `state_signature` to cards that have none but carry a status_step_check with constant tenant/from/to. Idempotent."""
+    d = directory or config.cards_dir()
+    done: List[str] = []
+    for c in load_cards(d, include_rejected=True):
+        if c.get("state_signature"):
+            continue
+        sums = [((tickets or {}).get(k) or {}).get("summary") or "" for k in c.get("evidence_tickets") or []]
+        sig = derive_state_signature(c, sums)
+        if sig:
+            c["state_signature"] = sig
+            c.setdefault("history", []).append({"ts": now(), "event": "state_signature_added", "run_id": None,
+                                                "note": "migration: tenant/from/to taken from status_step_check constants"})
+            save_card(c, d)
+            done.append(c["id"])
+    return done

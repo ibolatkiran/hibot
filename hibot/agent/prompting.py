@@ -14,7 +14,7 @@ def _j(o) -> str:
 
 def build_case_prompt(inc: dict, matches: List[dict], code_ctx: List[dict], catalog_text: str, *, mode: str,
                       region: str, budget: config.Budget, max_chars: int = 30000,
-                      resolved: str = "", baseline: str = "") -> str:
+                      resolved: str = "", baseline: str = "", card_section: str = "") -> str:
     L: List[str] = []
     L.append("## TICKET %s (source: %s)" % (inc.get("key") or "free text", inc.get("source")))
     L.append("app=%s country=%s company_code=%s language=%s rule-based problem_type=%s (a guess; may be wrong) status=%s" % (
@@ -64,6 +64,8 @@ def build_case_prompt(inc: dict, matches: List[dict], code_ctx: List[dict], cata
         L.append("\n" + resolved)
     if baseline:
         L.append("\n" + baseline)
+    if card_section:
+        L.append("\n" + card_section)
     L.append("\n## QUERY TEMPLATE CATALOG (region %s; ! required, ? optional)" % region)
     L.append(catalog_text)
     L.append("\n## RUN SETTINGS")

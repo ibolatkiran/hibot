@@ -69,6 +69,33 @@ created_at, history[]`. `params_from_entities`: `"entities.sku_codes[0]"`, `"$te
 Match score = 0.25 problem_type + 0.15 app + 0.45 keyword share + 0.15 entity requirements met (unmet requirements halve it,
 confirmed +0.05, rejected never). Two clearly marked EXAMPLE draft cards ship in `knowledge/cards/`.
 
+### Card review CLI (`cardcli.py`)
+```
+python -m hibot cards list [--status draft|confirmed|rejected]      # id, status, confidence, support (evidence tickets), title
+python -m hibot cards show <id>                                      # signature, root cause, verification queries, fix steps, evidence, history
+python -m hibot cards confirm <id> [--note ".."] [--root-cause ".."] [--fix-step ".." ...] [--classification user_error] [--title ".."]
+python -m hibot cards reject <id> --note ".."                        # rejected cards never match and are never revived by feedback
+python -m hibot cards annotate <id> --note ".."                      # history note only, status unchanged
+```
+`confirm` sets `status=confirmed`, `confidence=max(current, 0.85)`, keeps the evidence, replaces the overridden fields (`--fix-step` repeats and
+replaces ALL fix steps) and appends a history entry `{ts, event, who:"user", note, overrides{field:{old,new}}}`. Cards are re-validated on save.
+Card schema additions: optional `classification` (same values as `final_report.classification`) and optional `state_signature`
+`{tenant_id, from_status_id, to_status_id, from_status_name, to_status_name, target_words[], transition_configured}`.
+`tools/learning/mine_patterns.py` emits it for new footprint drafts; `python tools/learning/add_state_signature.py` migrates existing cards.
+
+### Known-issue shortcut (`known_issue.py`)
+After preflight (tenant, current status) and the baseline playbook, cards with a `state_signature` are matched on STATE:
+`0.40 tenant == card tenant` (mandatory) `+ 0.35 status of the WO AS OF TICKET CREATION == from_status` (current status minus the status changes of
+`wo_field_changes` newer than `created`; no log / no created time -> current status) `+ 0.25 ticket text mentions a target_word` (to-status name,
+`cancel` for "Cancelled", ...) `+ 0.05 confirmed`; one of the last two signals is required; threshold 0.65; confirmed ranks above draft; rejected never.
+The best card's `verification_queries` run before the LLM (budget-counted, `wo_locate` skipped, identical queries already run by the
+playbook are reused, not repeated). `status_step_check` is evaluated against the card's `transition_configured` claim: supports / contradicts /
+inconclusive. The case file gets a "BİLİNEN SORUN KARTI" section (pinned, never truncated); the report shows
+`Eşleşen kart: <id> (status), doğrulama: destekliyor|çelişiyor|doğrulanamadı`, cites the card as `evidence` (type `card`, so
+`hibot feedback --verdict correct` adds the ticket to the card's evidence) and, for a CONFIRMED card that is supported, reuses the card's
+classification, root cause and fix steps verbatim (LLM extras are appended and prefixed `[LLM ek önerisi]`; a historical manual force of the same
+transition is added as "SÜREÇ İHLALİ"). A contradicting card changes nothing in the report except the explicit `çelişiyor` line. Live mode only.
+
 ## Budgets (`config.Budget`, CLI `--max-steps`, `--max-queries`)
 | budget | default | on exhaustion |
 |---|---|---|

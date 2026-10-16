@@ -83,6 +83,28 @@
       "event": "evidence_added",
       "run_id": null,
       "note": "batch_footprint: 6 tickets, 6 with UpdateUserId unchanged; heuristic, NOT confirmed"
+    },
+    {
+      "ts": "2026-10-16T20:11:47+00:00",
+      "event": "state_signature_added",
+      "run_id": null,
+      "note": "migration: tenant/from/to taken from status_step_check constants"
     }
-  ]
+  ],
+  "state_signature": {
+    "tenant_id": 49,
+    "from_status_id": 818,
+    "to_status_id": 821,
+    "from_status_name": "Acceptat Service",
+    "to_status_name": "Pachetul FI creat",
+    "target_words": [
+      "pachetul fi creat",
+      "pachet",
+      "creat",
+      "document",
+      "error",
+      "missing"
+    ],
+    "transition_configured": true
+  }
 }

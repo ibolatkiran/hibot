@@ -237,6 +237,9 @@ def build_card(p: dict, tickets: Dict[str, dict], now: Optional[str] = None) -> 
         "title": title[:200],
         "symptom_signature": {"problem_type": _majority(p["problem_types"]), "app": _majority(p["apps"]),
                               "keywords": kws, "entity_requirements": ["work_order_ids"]},
+        "state_signature": cards.build_state_signature(
+            p["tenant"], p["from"], p["to"], p["from_name"], p["to_name"], p["allowed"] if isinstance(p["allowed"], bool) else None,
+            [(tickets.get(k, {}).get("text_clean") or {}).get("summary") or "" for k in p["keys"]]),
         "root_cause": cause,
         "verification_queries": [
             {"query_id": "wo_locate", "params_from_entities": {"Number": "entities.work_order_ids[0]"}},

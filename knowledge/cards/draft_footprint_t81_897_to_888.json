@@ -80,6 +80,25 @@
       "event": "evidence_added",
       "run_id": null,
       "note": "batch_footprint: 2 tickets, 2 with UpdateUserId unchanged; heuristic, NOT confirmed"
+    },
+    {
+      "ts": "2026-10-16T20:11:47+00:00",
+      "event": "state_signature_added",
+      "run_id": null,
+      "note": "migration: tenant/from/to taken from status_step_check constants"
     }
-  ]
+  ],
+  "state_signature": {
+    "tenant_id": 81,
+    "from_status_id": 897,
+    "to_status_id": 888,
+    "from_status_name": "Təsdiq edildi",
+    "to_status_name": "Ləğv edildi",
+    "target_words": [
+      "ləgv edildi",
+      "edildi",
+      "duzeltme"
+    ],
+    "transition_configured": false
+  }
 }

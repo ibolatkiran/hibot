@@ -440,7 +440,9 @@ class CardTests(unittest.TestCase):
         if not cs:
             self.skipTest("no shipped cards (knowledge/**/*.json is git-ignored)")
         for c in cs:
-            self.assertEqual(c["status"], "draft")
+            if c["status"] != "draft":                       # only a user review (cards confirm/reject) may change the status
+                self.assertTrue(any(h.get("who") == "user" and h.get("event") == c["status"] for h in c["history"]), c["id"])
+                continue
             if c.get("created_by") != "batch_footprint":      # tools/learning drafts are real, unconfirmed candidates
                 self.assertIn("EXAMPLE", c["title"])
             reg = registry()

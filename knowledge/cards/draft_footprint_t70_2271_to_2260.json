@@ -79,6 +79,24 @@
       "event": "evidence_added",
       "run_id": null,
       "note": "batch_footprint: 2 tickets, 2 with UpdateUserId unchanged; heuristic, NOT confirmed"
+    },
+    {
+      "ts": "2026-10-16T20:11:47+00:00",
+      "event": "state_signature_added",
+      "run_id": null,
+      "note": "migration: tenant/from/to taken from status_step_check constants"
     }
-  ]
+  ],
+  "state_signature": {
+    "tenant_id": 70,
+    "from_status_id": 2271,
+    "to_status_id": 2260,
+    "from_status_name": "Financed(Accounted)",
+    "to_status_name": "Work in progress",
+    "target_words": [
+      "work in progress",
+      "progre"
+    ],
+    "transition_configured": false
+  }
 }

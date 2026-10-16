@@ -1,6 +1,6 @@
 {
   "id": "draft_footprint_t70_2271_to_2257",
-  "title": "Tenant 70 Egypt: status 2271 -> 2257 not configured; developers force it manually",
+  "title": "Egypt (T70): Financed(Accounted) → Transfer talebi — bilinçli kısıt",
   "symptom_signature": {
     "problem_type": "data_correction",
     "app": "crm",
@@ -13,7 +13,7 @@
       "work_order_ids"
     ]
   },
-  "root_cause": "Tenant 70 Egypt: status 2271 (Financed(Accounted)) -> 2257 (Transfer) is NOT configured in Catalog.StatusStep, so the application refuses it; in 6 resolved tickets (2026-04-14 .. 2026-09-06) the work order status was nevertheless changed in Log.WorkOrderJsonLog without an Operation.WorkOrderGpsInfo history row, i.e. most likely forced directly in the database by a developer.",
+  "root_cause": "Tenant 70'te 2271 Financed(Accounted) → 2257 Transfer geçişi Catalog.StatusStep'te bilinçli olarak kapalıdır (iş birimi kararı). Kullanıcılar finanse edilmiş iş emrini Transfer'a almak için ticket açıyor; geçmişte developer'lar statüyü doğrudan DB'den zorlamış (WorkOrderGpsInfo satırı yok, UpdateUserId değişmemiş).",
   "verification_queries": [
     {
       "query_id": "wo_locate",
@@ -55,14 +55,13 @@
     }
   ],
   "fix_steps": [
-    "Confirm in status_step_check that 2271 -> 2257 is missing for the tenant (IsRequestedTarget = 0).",
-    "Decide with the business whether the transition should be allowed; if yes add the Catalog.StatusStep row (config change), if it is a deliberate restriction explain it to the requester instead of forcing the status.",
-    "Check wo_field_changes: a status change without a history row and with UpdateUserId unchanged confirms the manual fix.",
-    "If the app refuses for another reason, investigate why the application flow fails (see wo_status_transition_check)."
+    "Statüyü DB'den zorlama — bu geçiş bilinçli olarak kapalı.",
+    "Talep edene kısıtın bilinçli olduğunu açıkla; gerçekten gerekiyorsa iş birimi onayına yönlendir.",
+    "Elle zorlama yapılmışsa (wo_field_changes'te geçmiş satırsız 2271→2257) süreç ihlali olarak raporla."
   ],
   "code_locations": [],
-  "confidence": 0.7,
-  "status": "draft",
+  "confidence": 0.85,
+  "status": "confirmed",
   "evidence_tickets": [
     "SM-2126600",
     "SM-2070070",
@@ -85,6 +84,60 @@
       "event": "evidence_added",
       "run_id": null,
       "note": "batch_footprint: 6 tickets, 6 with UpdateUserId unchanged; heuristic, NOT confirmed"
+    },
+    {
+      "ts": "2026-10-16T20:11:47+00:00",
+      "event": "state_signature_added",
+      "run_id": null,
+      "note": "migration: tenant/from/to taken from status_step_check constants"
+    },
+    {
+      "ts": "2026-10-16T20:13:54+00:00",
+      "event": "confirmed",
+      "who": "user",
+      "run_id": null,
+      "note": "Kullanıcı 2026-10-16: bilerek kapatıldı (D17)",
+      "overrides": {
+        "title": {
+          "old": "Tenant 70 Egypt: status 2271 -> 2257 not configured; developers force it manually",
+          "new": "Egypt (T70): Financed(Accounted) → Transfer talebi — bilinçli kısıt"
+        },
+        "root_cause": {
+          "old": "Tenant 70 Egypt: status 2271 (Financed(Accounted)) -> 2257 (Transfer) is NOT configured in Catalog.StatusStep, so the application refuses it; in 6 resolved tickets (2026-04-14 .. 2026-09-06) the work order status was nevertheless changed in Log.WorkOrderJsonLog without an Operation.WorkOrderGpsInfo history row, i.e. most likely forced directly in the database by a developer.",
+          "new": "Tenant 70'te 2271 Financed(Accounted) → 2257 Transfer geçişi Catalog.StatusStep'te bilinçli olarak kapalıdır (iş birimi kararı). Kullanıcılar finanse edilmiş iş emrini Transfer'a almak için ticket açıyor; geçmişte developer'lar statüyü doğrudan DB'den zorlamış (WorkOrderGpsInfo satırı yok, UpdateUserId değişmemiş)."
+        },
+        "fix_steps": {
+          "old": [
+            "Confirm in status_step_check that 2271 -> 2257 is missing for the tenant (IsRequestedTarget = 0).",
+            "Decide with the business whether the transition should be allowed; if yes add the Catalog.StatusStep row (config change), if it is a deliberate restriction explain it to the requester instead of forcing the status.",
+            "Check wo_field_changes: a status change without a history row and with UpdateUserId unchanged confirms the manual fix.",
+            "If the app refuses for another reason, investigate why the application flow fails (see wo_status_transition_check)."
+          ],
+          "new": [
+            "Statüyü DB'den zorlama — bu geçiş bilinçli olarak kapalı.",
+            "Talep edene kısıtın bilinçli olduğunu açıkla; gerçekten gerekiyorsa iş birimi onayına yönlendir.",
+            "Elle zorlama yapılmışsa (wo_field_changes'te geçmiş satırsız 2271→2257) süreç ihlali olarak raporla."
+          ]
+        },
+        "classification": {
+          "old": null,
+          "new": "user_error"
+        }
+      },
+      "status_before": "draft"
     }
-  ]
+  ],
+  "state_signature": {
+    "tenant_id": 70,
+    "from_status_id": 2271,
+    "to_status_id": 2257,
+    "from_status_name": "Financed(Accounted)",
+    "to_status_name": "Transfer",
+    "target_words": [
+      "transfer",
+      "transf"
+    ],
+    "transition_configured": false
+  },
+  "classification": "user_error"
 }

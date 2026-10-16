@@ -25,7 +25,7 @@ NO_QUERY_CONF_CAP = 0.6
 class Investigation:
     def __init__(self, llm: LLMClient, incident: dict, matches: List[dict], code_ctx: List[dict], executor: Executor,
                  *, budget: Optional[config.Budget] = None, system_prompt: Optional[str] = None,
-                 on_step: Optional[Callable[[dict], None]] = None, resolved_text: str = "", baseline_text: str = ""):
+                 on_step: Optional[Callable[[dict], None]] = None, resolved_text: str = "", baseline_text: str = "", card_text: str = ""):
         self.llm, self.inc, self.matches, self.executor = llm, incident, matches, executor
         self.budget = budget or executor.budget
         self.system = system_prompt or prompts.system_prompt()
@@ -38,7 +38,7 @@ class Investigation:
         catalog = executor.registry.catalog_text(executor.region)
         self.case_prompt = build_case_prompt(incident, matches, code_ctx, catalog, mode=executor.mode,
                                              region=executor.region, budget=self.budget, resolved=resolved_text,
-                                             baseline=baseline_text)
+                                             baseline=baseline_text, card_section=card_text)
 
     # ------------------------------------------------------------ prompts
     def _messages(self, tail: Optional[str] = None) -> List[Dict[str, str]]:

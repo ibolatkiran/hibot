@@ -1,5 +1,7 @@
 """CLI:  python -m hibot analyze SM-1777386 [--text "..."] [--region EU|APAC] [--live] [--max-steps N] [--llm fake|http]
-        python -m hibot feedback <run_id> --verdict correct|wrong|partial [--note "..."]"""
+        python -m hibot feedback <run_id> --verdict correct|wrong|partial [--note "..."]
+        python -m hibot cards list [--status draft|confirmed|rejected] | show <id> | confirm <id> [--note ..] [--root-cause ..]
+                              [--fix-step ..]... [--classification ..] [--title ..] | reject <id> --note .. | annotate <id> --note .."""
 from __future__ import annotations
 
 import argparse
@@ -68,6 +70,28 @@ def cmd_feedback(a) -> int:
     return 0
 
 
+def cmd_cards(a) -> int:
+    from hibot.agent import cardcli
+    try:
+        if a.action == "list":
+            print(cardcli.format_list(cardcli.list_cards(a.status)))
+        elif a.action == "show":
+            print(cardcli.format_card(cardcli.get_card(a.id)))
+        else:
+            if a.action == "confirm":
+                c = cardcli.confirm(a.id, a.note or "", root_cause=a.root_cause, fix_steps=a.fix_step,
+                                    classification=a.classification, title=a.title)
+            elif a.action == "reject":
+                c = cardcli.reject(a.id, a.note or "")
+            else:
+                c = cardcli.annotate(a.id, a.note or "")
+            print("%s: durum=%s güven=%.2f (geçmiş %d kayıt)" % (c["id"], c["status"], float(c["confidence"]), len(c["history"])))
+    except (KeyError, ValueError) as e:
+        print("error: %s" % e, file=sys.stderr)
+        return 2
+    return 0
+
+
 def main(argv=None) -> int:
     _utf8()
     from hibot.envfile import load_env
@@ -88,7 +112,20 @@ def main(argv=None) -> int:
     fb.add_argument("--verdict", required=True, choices=["correct", "wrong", "partial"])
     fb.add_argument("--note")
     fb.set_defaults(fn=cmd_feedback)
+    cd = sub.add_parser("cards", help="review known-issue cards (list/show/confirm/reject/annotate)")
+    cd.add_argument("action", choices=["list", "show", "confirm", "reject", "annotate"])
+    cd.add_argument("id", nargs="?", help="card id (all actions except list)")
+    cd.add_argument("--status", choices=["draft", "confirmed", "rejected"], help="list: filter by status")
+    cd.add_argument("--note", help="reviewer note (required for reject/annotate)")
+    cd.add_argument("--root-cause", dest="root_cause", help="confirm: override the root cause")
+    cd.add_argument("--fix-step", dest="fix_step", action="append", help="confirm: replace fix steps (repeat the flag per step)")
+    cd.add_argument("--classification", choices=["code_defect", "master_data", "access", "data_correction", "integration", "config",
+                                                  "user_error", "unknown"], help="confirm: set the classification")
+    cd.add_argument("--title", help="confirm: override the title")
+    cd.set_defaults(fn=cmd_cards)
     a = p.parse_args(argv)
+    if a.cmd == "cards" and a.action != "list" and not a.id:
+        p.error("cards %s needs a card id" % a.action)
     return a.fn(a)
 
 

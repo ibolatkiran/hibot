@@ -80,7 +80,7 @@ Yeni ticket ──► [1] Varlık çıkarımı (WO no, ülke→tenant, uygulama,
 | "Sorun tam olarak nerede" | 🟡 DB kaynaklı vakalarda iyi; kod hatası vakaları canlıda hiç denenmedi |
 | Çözüm yolu | 🟡 Ana veri ve yetki (%43) canlıda denenmedi |
 | Öğrenme | 🟡 Mekanizma hazır; geri bildirim sadece CLI'dan |
-| Tekrar → doğrudan kök neden | 🔄 Kartla analiz yapılıyor |
+| Tekrar → doğrudan kök neden | 🟢 Kartla analiz çalışıyor (2 canlı vaka, FINDINGS §14); kart sayısı az |
 | Otomasyon | ⬜ |
 
 Kapsam sınırları: ticket'ların ~%34'ü Sirius dışı (Manusoft, Contact, Salesforce; kod ve DB'leri yok). APAC DB yok.
