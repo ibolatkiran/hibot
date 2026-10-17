@@ -32,6 +32,7 @@ Sirius (Arçelik/Beko saha servis platformu) incident'lerini analiz eden bir age
 | `hibot/prompts/` | sistem ve aksiyon prompt'ları |
 | `knowledge/` | `schema/`, `codemap/`, `graph/`, `incidents/` (üretilir), `queries/` (SQL şablonları), `cards/` (bilinen sorun kartları, **öğrenilen bilgi, git'te**), `feedback/` (git'te) |
 | `runs/` | her analizin girdisi, adımları ve raporu (git dışında) |
+| `knowledge/skills/` | **araştırma yöntemleri kitaplığı.** Her ticket'ta `investigation_protocol.md` + semptoma uygun skill izlenir. Elle çözülen her vakadan sonra güncellenir (D20). |
 | `tests/` | unittest'ler: `python -m unittest discover tests` (~418 test) |
 
 ## Kullanım

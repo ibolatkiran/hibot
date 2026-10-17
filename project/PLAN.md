@@ -87,6 +87,15 @@ Kapsam sınırları: ticket'ların ~%34'ü Sirius dışı (Manusoft, Contact, Sa
 
 **Kullanıcıyla kararlaştırılan sıra:** (1) değerlendirme seti ve isabet ölçümü → (2) kod hatası vakaları → (3) ana veri ve yetki → (4) developer'a teslim + tek tık geri bildirim → (5) APAC, sonra otomasyon.
 
+## Yeni yön (D20, 2026-10-17): araçlar + skill'ler + beyin
+- ✅ Yöntem kitaplığı `knowledge/skills/` (koordinatör yazdı, `07d22cf`)
+- 🔄 Araç katmanı + MCP sunucusu `hibot/tools`, `hibot/mcp_server.py` (Sonnet)
+- 🔄 Tur 2 (Sonnet): yardımcıları araç olarak kullanılacak (ekran yetki koşulu, kolon kökeni, yeni şablonlar)
+- ⬜ ArGPT döngüsünü yenile: genel araçlar (`tool_catalog`), semptoma göre skill seçimi ve prompt'a enjeksiyonu, zorunlu plan → araştır → çürüt → raporla adımları, daha geniş adım bütçesi. **Tur 2 ve araç katmanı bittikten sonra.**
+- ⬜ Karşılaştırma: eski ve yeni döngü (dev + test), ayrıca SM-2172385 / SM-2169006'da Claude Code headless (Sonnet) + MCP denemesi
+- ⬜ Developer'lar için Claude Code + HiBot MCP kurulum rehberi (zor vakalar)
+- ⬜ Yerel embedding ile benzer ticket araması (D21, sonra)
+
 ## Sıradaki iş (bir sonraki agent için)
 Durum: ArGPT ve EU prod (read-only) bağlı, canlı analiz çalışıyor (FINDINGS §11–12). APAC DB yok.
 1. **Kart incelemesi (kullanıcı veya ekip):** 7 taslak kart (FINDINGS §13). Onay ve red için bir CLI komutu gerekebilir (`hibot cards review`). SM-2139009 kalıbı toplu analizle 3 ticket'ta doğrulandı.
