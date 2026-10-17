@@ -683,6 +683,24 @@ Karşılaştırma: `knowledge/eval/compare_round1_vs_round2.md`.
 - Gümüş etiketli rutin vakalarda üstünlük **gösterilemedi**. Deterministik bilgi enjeksiyonu (kartlar, eksen kuralları) burada belirleyici.
 - **Doğru mimari:** güçlü beyin + deterministik ön adımlar (wo_locate, temel sorgu setleri, kart eşleşmesi, ticket penceresi) + açık sınıflandırma kuralları. İkisinin birleşimi.
 
+## 22. SM-1808060 (ZA, "NPS SMS Completed statüsünde gitsin"): UI üzerinden ilk kullanıcı denemesi, 2026-10-17
+
+Kullanıcı DbChangeTracking UI'ından çalıştırdı (servis, v1 döngüsü). Pipeline run `20261017-133155-SM-1808060-38e7`, 10 sn.
+
+**HiBot'un yaptığı**
+- İlk turda doğrudan `final_report` (0 araç, 0 sorgu) → change_request / route_to_backlog, 0,45.
+- Kod konumu "belirlenemedi"; çözüm adımları "konfigürasyonu güncelleyin" diyor. Yanlış, çünkü böyle bir konfigürasyon yok.
+- Hiçbir koruma devreye girmedi: güven 0,45 (eşik 0,4) ve iş emri yok.
+
+**Koordinatörün bulduğu (gerçek mekanizma)**
+- `Communication.PrepareNPSData` (satır 19-24): NPS, yeni statünün `MobileStatusId IN (13,4,9,19) OR (MobileStatusId = 8 AND TenantId <> 70)` olmasıyla tetikleniyor. Kural SP'ye sabit yazılmış; iş emri başına bir NPS gidiyor (`NOT EXISTS Operation.NpsData`).
+- T68: `DEFY App.Required` (318) → MobileStatusId 8 (tetikliyor); `Completed` (335) → 26 (tetiklemiyor).
+- Çözüm: SP'de T68 için MobileStatusId 26 eklenmeli **ve** 8 dalından çıkarılmalı. Aksi halde iş emri başına tek NPS kuralı yüzünden Completed'daki NPS hiç gitmez. Doğru sınıf `change_request` + `code_change`. Uzun vadede tenant → NPS tetik statüsü bir konfigürasyon tablosuna taşınmalı.
+
+**Dersler**
+- v1 döngüsü, kanıt toplamadan rapor yazmaya izin veriyordu. → v2 agent'ına **asgari kanıt koruması** eklemesi söylendi: hiç araç çağrılmadıysa final rapor bir kez geri çevrilir; istisna, desteklenmiş onaylı kart.
+- Yöntem kitaplığı güncellendi: `notification_failure.md` dosyasına "Send SMS/NPS on status X instead of Y" bölümü ve worked example eklendi. SM-1808060 v2 için set dışı bir dev kontrolü olarak kullanılacak.
+
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
 Önyüzün çağırdığı ama backend'de karşılığı olmayan **109 benzersiz çağrı** var, liste: `knowledge/codemap/trace_index.json` → `unmatched_frontend_calls`. Örnekler:
