@@ -4,6 +4,9 @@ with an ArGPT run on EXACTLY the same tickets.
     python tools/eval/run_eval_claude.py run   --tag claude_haiku_20 [--n 20] [--model claude-haiku-5-5] [--max-usd 0.5]
     python tools/eval/run_eval_claude.py score --tag claude_haiku_20 --compare round2_20261017 [--compare round1_20261016 ...]
 
+Another eval set (e.g. the second hold-out, all of its tickets): add `--eval-set knowledge/eval/holdout2.json --n 40` to BOTH run and score.
+The chosen keys are then stored in runs/eval_<tag>/subset.json (the shared subset20.json is only used for the default eval set).
+
 Records are written to runs/eval_<tag>/results.jsonl in the run_eval.py format, so tools/eval/score.py logic applies.
 Limitation: the Claude brain has no deterministic ticket-window step, so `manual_fix_detected` checks only hit when the
 model itself called the `ticket_window` tool.
@@ -96,15 +99,23 @@ def to_record(key, info, elapsed):
             "error": None if m else "final report header not found"}
 
 
+def _subset_file(a):
+    return SUBSET_FILE if not a.eval_set else ROOT / "runs" / ("eval_%s" % a.tag) / "subset.json"
+
+
+def _load_items(a):
+    return score.load_eval_set(Path(a.eval_set)) if a.eval_set else score.load_eval_set()
+
+
 def cmd_run(a):
     from hibot.brains.claude_agent import investigate
     from hibot.envfile import load_env
     load_env()
-    items = score.load_eval_set()
+    items = _load_items(a)
     keys = pick_subset(items, a.n)
-    SUBSET_FILE.write_text(json.dumps({"n": len(keys), "keys": keys}, indent=1), encoding="utf-8")
     out_dir = ROOT / "runs" / ("eval_%s" % a.tag)
     out_dir.mkdir(parents=True, exist_ok=True)
+    _subset_file(a).write_text(json.dumps({"n": len(keys), "keys": keys}, indent=1), encoding="utf-8")
     res_path = out_dir / "results.jsonl"
     done = set(score.load_records(res_path)) if res_path.exists() else set()
     total = 0.0
@@ -130,8 +141,8 @@ def cmd_run(a):
 
 
 def cmd_score(a):
-    items = score.load_eval_set()
-    keys = set(json.loads(SUBSET_FILE.read_text(encoding="utf-8"))["keys"])
+    items = _load_items(a)
+    keys = set(json.loads(_subset_file(a).read_text(encoding="utf-8"))["keys"])
     sub = [i for i in items if i["key"] in keys]
     tags = [a.tag] + list(a.compare or [])
     rows = []
@@ -200,9 +211,11 @@ def main():
     r.add_argument("--max-usd", type=float, default=0.5, help="per ticket")
     r.add_argument("--max-steps", type=int, default=30)
     r.add_argument("--total-usd", type=float, default=2.0, help="stop the whole run above this spend")
+    r.add_argument("--eval-set", help="default: knowledge/eval/eval_set.json (stratified --n subset of its test split)")
     s = sp.add_parser("score")
     s.add_argument("--tag", required=True)
     s.add_argument("--compare", action="append")
+    s.add_argument("--eval-set", help="same value as used for run")
     a = ap.parse_args()
     cmd_run(a) if a.cmd == "run" else cmd_score(a)
 
