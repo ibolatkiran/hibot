@@ -649,6 +649,17 @@ Karşılaştırma: `knowledge/eval/compare_round1_vs_round2.md`.
 - Bütçe: `--max-usd` (varsayılan $1) ve `--max-steps` (30); bütçenin %85'inde araçsız final rapor zorlanıyor.
 - Kullanıcı deneme için kişisel bir Claude API hesabı açtı ($5 kredi). **Veri uyarısı yapıldı:** ticket metni ve maskeli sorgu sonuçları Anthropic API'ye gidiyor.
 
+## 20. Claude Haiku 5.5 + HiBot araçları: iki zor ticket, 2026-10-17
+
+`python -m hibot.brains.claude_agent <KEY> --model claude-haiku-5-5`. Native tool calling, aynı 18 araç + `read_skill`, sistem prompt'unda investigation_protocol. Kullanıcı Sonnet yerine daha ucuz bir model istedi; Haiku 5.5 seçildi. Not: API anahtarı bir workspace'e bağlı değildi → `ANTHROPIC_WORKSPACE_ID` başlığı eklendi.
+
+| Ticket | Sonuç | Adım / maliyet / süre | Değerlendirme |
+|---|---|---|---|
+| SM-2169006 (BD işçilik) | master_data / master_data_change, 0,85 | 8 / **$0,007** / 47 sn | Koordinatörün teşhisiyle birebir. Ek olarak: çürütme denemesi (2 SKU → kategori çapında), Technician'daki çağrı yeri (`afterSalesDataServices.js:31`), benzer ticket'lar, kart önerisi. `value_provenance` skill'ini kendisi seçti. |
+| SM-2172385 (MA Repair Date) | change_request / route_to_backlog, 0,6 | 13 / **$0,015** / 77 sn | **Koordinatörü geçti.** Gating listesi ve 920/921'in dışarıda kalması; CRM'deki sabit `1218`; **`VerificationDate` durum geçişlerinde `GETUTCDATE()` ile otomatik doluyor** (`WorkOrder.UpdateStatus.sql:42-44`, `PaymentControl`, `SetWorkOrderSendtoCenter`) — örnek bir MA iş emrinde `wo_field_changes` ile kanıtladı; MA'da `Log.WorkOrderDateEditAction` = 0 (özellik hiç kullanılmamış). Bazı ad-hoc SQL'leri validator reddetti (yanlış kolon/tablo adları), model kendini düzeltti. |
+
+**Sonuç:** Beyin (native tool calling + güçlü model) belirleyici. Aynı araçlar ve skill'lerle Haiku 5.5, ArGPT JSON döngüsünün tur 2 sonucunu geçti ve koordinatör seviyesine ulaştı; maliyeti ticket başına ~1–2 cent. ArGPT zorunluluğu (D20) sürüyor. → Seçenekler: (a) kurum içinde Claude erişimi (Bedrock / Foundry / kurumsal API) için onay alınması, (b) ArGPT `chat-completion` + GPT-5.1 ile aynı mimariyi kurup karşılaştırma. Ölçüm: 40 ticket'lık test setiyle (~$0,5).
+
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
 Önyüzün çağırdığı ama backend'de karşılığı olmayan **109 benzersiz çağrı** var, liste: `knowledge/codemap/trace_index.json` → `unmatched_frontend_calls`. Örnekler:
