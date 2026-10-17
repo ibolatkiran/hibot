@@ -11,7 +11,7 @@ HiBot analyses Sirius incidents with read-only PROD DB evidence. Layers:
 
 It is delivered as a module in **DbChangeTrackingSystem** (UI → API → HiBot HTTP service), working end to end locally. Learning works: UI feedback promoted 3 confirmed cards. Service default is **v1 + minimum-evidence guard** (D26), because v2 had better accuracy but bad calibration (FINDINGS §23). With native tool calling, Claude Haiku reached coordinator level on hard tickets (FINDINGS §20). The ArGPT gateway has no function calling; IT answers are expected next week (D25).
 
-## IN FLIGHT: round 3 (making v2 good enough to become default)
+## DONE: round 3 (v2 default attempt) FAILED the pre-registered criterion; v1 stays default (D27, FINDINGS §24, knowledge/eval/compare_holdout2.md). Original spec below, for history:
 - Spec: WORKLOG #47 + FINDINGS §23.
   1. Freeze a new holdout `knowledge/eval/holdout2.json` (sha256 in `knowledge/eval/README.md`).
   2. Deterministic calibration caps (`calibration.py`).

@@ -739,6 +739,16 @@ Karşılaştırma: `knowledge/eval/compare_v2.md`. Chat endpoint'i günlük limi
 - → IT'den gelecek cevaplar (D25: ArGPT function calling veya kurumsal Claude) bir sonraki büyük adım.
 - ⚠️ **Test seti kirlendi:** aynı 40 ticket dört kez ölçüldü. Sonraki turlarda yeni bir hold-out seti gerekiyor (veri setinden sonraki yeni ticket'lar).
 
+## 24. Tur 3 sonu: holdout2'de v1 ve v2 (kör, tek koşu), 2026-10-17
+
+Tam tablo ve gerekçe: `knowledge/eval/compare_holdout2.md`. 40 yeni EU ticket'ı, 38 güvenilir etiket.
+- v1: rct %68, iki eksen %58, emin-yanlış(rct) %11, 24,6 sn. v2: rct %45, iki eksen %42, emin-yanlış(rct) %5, 66 sn, 4 hatalı koşu.
+- v2 hiçbir katmanda v1'den iyi değil; ana veri %83 vs %100, status_nochange %0 vs %60, notification %0 vs %50, integration %0 vs %25.
+- v2'nin düşük emin-yanlış oranı daha güvenilir 0,7+ bandından değil, 38 ticket'ın 27'sinin 0,4–0,7 bandında kalmasından (az taahhüt) geliyor. v1'in 0,7+ bandı da zayıf (n=9: rct %56).
+- Dev'deki 5/5, holdout2'ye taşınmadı (dev skill örnekleriyle sızıntılı). Checklist/plan/critic (tur 3) JSON-taklidi döngüsünde isabeti artırmadı, süreyi 2,7 katına çıkardı.
+- Her iki döngünün ortak zayıf noktaları: `status_nochange` (veri düzeltme aksiyonuna hiç ulaşılmıyor), `integration_failure` (v1 ikisini `master_data` sanıyor, 0,78 güvenle), `performance_report` (kanıt yok; v1 dürüstçe unknown).
+- Sonuç (D27): varsayılan v1. Bir sonraki büyük adım native tool calling (D25). holdout2 harcandı, yeni kör set gerekli.
+
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
 Önyüzün çağırdığı ama backend'de karşılığı olmayan **109 benzersiz çağrı** var, liste: `knowledge/codemap/trace_index.json` → `unmatched_frontend_calls`. Örnekler:

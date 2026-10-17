@@ -95,7 +95,7 @@ Kapsam sınırları: ticket'ların ~%34'ü Sirius dışı (Manusoft, Contact, Sa
 - ✅ v2 birleşik döngüsü yapıldı ve ölçüldü (FINDINGS §23): isabet biraz arttı, kalibrasyon bozuldu, araştırma sığ → varsayılan v1 (D26)
 - ⬜ **Sıradaki büyük adım (IT cevabına bağlı, D25):** native tool calling: ArGPT function calling ya da kurumsal Claude. Gelince `hibot/brains` altında aynı araçlar + skill'ler + case file ile ölçülecek.
 - ⬜ Yeni hold-out değerlendirme seti: veri setinden sonra açılmış ~30–40 ticket (Jira XML export), etiketler DB izi + kullanıcı geri bildirimiyle.
-- ⬜ v2 kalibrasyonu: pencerede değişiklik olmayan statü ticket'larında `user_error` güven sınırı.
+- ✅ (tur 3, holdout2 sonucu D27: v1 kalır) v2 kalibrasyonu: pencerede değişiklik olmayan statü ticket'larında `user_error` güven sınırı.
 - ⬜ DbChangeTracking: iki repoda `feature/hibot-module` commit'i (kullanıcı onayı), `HiBot:ServiceKey`'in user secrets'a taşınması, servisin kalıcı bir host'a taşınması.
 - ⬜ (eski) **Birleşik döngü (öncelik):** deterministik ön adımlar (wo_locate, temel sorgu setleri, kart eşleşmesi, ticket penceresi, ekran yetki koşulu, kolon kökeni) → sonuçlar case file'a → beyin (ArGPT `argpt_chat`; isteğe bağlı Claude) genel araçlar + skill'lerle devam eder → eksen kuralları ve kart benimseme kuralı prompt'ta. Claude prompt'una da eksen tanımları eklenecek.
 - ⬜ ArGPT döngüsünü yenile: genel araçlar (`tool_catalog`), semptoma göre skill seçimi ve prompt'a enjeksiyonu, zorunlu plan → araştır → çürüt → raporla adımları, daha geniş adım bütçesi. **Tur 2 ve araç katmanı bittikten sonra.**
