@@ -1,6 +1,6 @@
 # HiBot in DbChangeTrackingSystem (D24): design
 
-Status: **proposal, waiting for user approval** (2026-10-17). Source: Explore report on `d:\repos\DbChangeTrackingSystemAPI` and `d:\repos\DbChangeTrackingSystemUI`.
+Status: **approved, being implemented** (2026-10-17). User decisions: the HiBot service runs **locally** for now (127.0.0.1:8077); **all Okta-authenticated users** may use it (no new role). Branch `feature/hibot-module` in both DbChangeTracking repos; no commit or push without user review. Source: Explore report on `d:\repos\DbChangeTrackingSystemAPI` and `d:\repos\DbChangeTrackingSystemUI`.
 
 ## Context
 - DbChangeTrackingSystem has two parts. The legacy part does DB change tracking and release. The new **Sirius Monitoring Platform** handles read-only data sources, rules, incidents and Teams/email notifications. Its own docs say "No AI in Phase 1; architecture must remain AI-ready". HiBot is that AI step.

@@ -70,5 +70,11 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
     - 18 araç + `read_skill`
     - ortak sınıflandırma kuralları ve kart benimseme kuralı
     - Ölçüm dev seti + test setiyle (`v2_20261017`).
+37. Kullanıcı kararları D23–D25: kart kararları uygulandı; teslim kanalı DbChangeTrackingSystem; IT soruları hafta sonu sonrası.
+38. DbChangeTracking incelendi (Explore). Tasarım: `project/DELIVERY_DBCT.md`. Kullanıcı kararları: servis lokal, tüm Okta kullanıcıları.
+39. Uygulama başlatıldı, 3 paralel Sonnet agent:
+    - HiBot HTTP servisi (`hibot/service`)
+    - DbChangeTracking API modülü (`feature/hibot-module`, commit yok)
+    - DbChangeTracking UI sayfaları (`feature/hibot-module`, commit yok)
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.
