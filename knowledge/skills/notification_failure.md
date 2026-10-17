@@ -1,3 +1,14 @@
+---
+skill: notification_failure
+problem_types: notification_failure
+keywords: \bsms\b|\bnps\b|notification|bildirim|survey|welcome message
+keyword_weight: 2
+required_evidence:
+- id: trigger_sp_read | description: Read the stored procedure / code that PREPARES or SENDS the message (its status filter or sending condition), not only the sent rows | satisfied_by: read_file:(Nps|Sms|Email|Notif|Message|Mail)[^/]*\.(sql|cs)$ ; read_file:(Sms|Email|Notification|Nps)\w*(Manager|Job|Service|Sender)\.cs$
+- id: status_attribute_query | when: text~\b(status|statu|completed|closed|approved|durum|cancel\w*)\b | description: Query the tenant's status attribute the rule uses (sql on Catalog.Status, e.g. MobileStatusId, joined to Catalog.AppTranslationEntry for names) so you can say which statuses fire today and which do not | satisfied_by: sql:Catalog\.Status\b|MobileStatusId
+- id: delivery_rows | when: wo | description: Look at the message rows of the work order (queued? sent? failed?) | satisfied_by: template:notifications_for_wo ; sql:SmsEmailSendingData|NpsData
+- id: window_health | when: no_wo | description: No work order in the ticket: check job / queue / error health around the ticket time | satisfied_by: template:job_health,outbound_queue_backlog,db_errors_recent
+---
 # SMS / e-mail / NPS / push not sent
 
 ## Steps

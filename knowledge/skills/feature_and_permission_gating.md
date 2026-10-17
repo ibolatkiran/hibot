@@ -1,3 +1,11 @@
+---
+skill: feature_and_permission_gating
+detector: capability
+keywords: (cannot|can't|unable|not able).{0,30}(edit|change|update|modify|see|find)|not editable|read.?only|\bbutton\b|permission|authori[sz]|yetki|please (update|change|enable|allow)
+required_evidence:
+- id: caller_screen_read | description: Read the CALLING SCREEN code around the gate (button / field render condition, user-type / role / tenant lists, env flags, TODO comments) | satisfied_by: read_file:\.(js|jsx|tsx|ts)$
+- id: user_type_lookup | description: Resolve the ids found in code (user types / roles) to meaning and tenant: Catalog.SiriusUserType | satisfied_by: template:user_type_lookup ; sql:SiriusUserType
+---
 # "Cannot do X" / field not editable / please update a field: is the feature there, and who may use it?
 
 Many "requests" are not bugs. The feature often **already exists** but is hidden for this user type, tenant or environment, often by a **hard-coded list in the frontend**. Find the gate before calling it a change request.

@@ -26,6 +26,7 @@ from hibot.llm.client import LLMClient, LLMError, client_from_env
 from hibot.llm.jsonio import JsonRepairFailed, complete_json, validate_schema
 
 from . import actions, axes, config
+from . import checklist as checklist_mod
 from .executor import Executor, _cut
 from .investigate import Investigation
 from .prompting import build_case_prompt
@@ -37,6 +38,26 @@ EVIDENCE_TYPE_MAP = {"sql": "query", "template": "query", "run_template": "query
                      "file": "code", "source": "code", "sp": "code", "graph": "code", "skill": "code", "git": "code",
                      "ticket": "similar_case", "similar": "similar_case", "similar_ticket": "similar_case", "known_card": "card"}
 TOOL_ARGS_CHARS = 160
+PLAN_MIN_HYP, PLAN_MAX_HYP = 2, 4
+CRITIC_MAX_ADJ = -0.4                         # the critic may only LOWER the confidence
+CRITIC_LOG_CHARS = 9000
+PLAN_PROMPT = (
+    "STEP 0: PLAN FIRST. Reply with ONE JSON object and NO tool call: "
+    '{"plan": {"hypotheses": [{"h": "<hypothesis>", "confirm_by": "<the observation that would confirm it>", "refute_by": "<the observation that would refute it>"}, ...], '
+    '"first_tools": ["<tool name>", ...]}}. '
+    "Give 2-4 competing hypotheses (at least one NON-code: master data, configuration, permission, user process, other system) and the tools you will call first. "
+    "Use the METHOD FOR THIS CASE section of the case file: its first step normally belongs in first_tools.")
+CRITIC_SYSTEM = (
+    "You are the CRITIC of a Sirius incident investigation. Another engineer investigated with read-only tools and wrote a DRAFT REPORT. "
+    "Check every claim of the draft against the EVIDENCE LOG (the observations that really came back). Be strict and concrete.\n"
+    "- A claim is UNSUPPORTED when no observation in the log shows it (numbers, ids, file:line, 'config is missing', 'the user did not ...').\n"
+    "- A competing hypothesis is UNTESTED when the plan or the ticket suggests it and no observation refutes it.\n"
+    "- 'No change in the ticket window' is not evidence of user_error / config; a work order already in the requested status does not prove user_error.\n"
+    "- verdict 'revise' ONLY when 1-3 cheap concrete tool calls (sql / run_template / read_file / code_search / column_writers ...) could settle an unsupported "
+    "key claim or an untested alternative; otherwise 'accept' (then still list the unsupported claims).\n"
+    "- confidence_adjustment is a number between -0.4 and 0: 0 when everything important is supported, about -0.1 per unsupported KEY claim.\n"
+    'Reply with ONE JSON object only: {"verdict": "accept|revise", "unsupported_claims": ["..."], "untested_hypotheses": ["..."], '
+    '"confidence_adjustment": 0.0, "missing_checks": [{"tool": "<tool name>", "args_hint": "<what to look up>", "why": "<what it would settle>"}]}')
 
 
 # --------------------------------------------------------------------------- llm client
@@ -164,6 +185,59 @@ def parse_turn(obj: Any, only_final: bool = False) -> Tuple[str, Any, List[str]]
     return "tools", calls, []
 
 
+def parse_plan(obj: Any) -> Tuple[Optional[dict], List[str]]:
+    """({"hypotheses":[{h,confirm_by,refute_by}], "first_tools":[str]}, errors).  Accepts {"plan": {...}} or the bare plan object."""
+    if not isinstance(obj, dict):
+        return None, ["the reply must be ONE JSON object"]
+    plan = obj.get("plan") if isinstance(obj.get("plan"), dict) else obj
+    errs: List[str] = []
+    hyps = plan.get("hypotheses")
+    out_h: List[dict] = []
+    if not isinstance(hyps, list) or not (PLAN_MIN_HYP <= len(hyps) <= PLAN_MAX_HYP):
+        errs.append('plan.hypotheses must be a list of %d-%d objects {"h","confirm_by","refute_by"}' % (PLAN_MIN_HYP, PLAN_MAX_HYP))
+    else:
+        for i, h in enumerate(hyps):
+            if not isinstance(h, dict) or any(not isinstance(h.get(k), str) or len(h.get(k).strip()) < 3 for k in ("h", "confirm_by", "refute_by")):
+                errs.append("plan.hypotheses[%d] needs non-empty text in h, confirm_by and refute_by" % i)
+            else:
+                out_h.append({k: _clip(h[k].strip(), 400) for k in ("h", "confirm_by", "refute_by")})
+    ft = plan.get("first_tools")
+    if isinstance(ft, str):
+        ft = [ft]
+    if not isinstance(ft, list) or not ft or any(not isinstance(x, str) or not x.strip() for x in ft):
+        errs.append('plan.first_tools must be a non-empty list of tool names (strings)')
+        ft = []
+    if errs:
+        return None, errs
+    return {"hypotheses": out_h, "first_tools": [x.strip()[:80] for x in ft[:6]]}, []
+
+
+def parse_critic(obj: Any) -> Tuple[Optional[dict], List[str]]:
+    if not isinstance(obj, dict):
+        return None, ["the reply must be ONE JSON object"]
+    v = str(obj.get("verdict") or "").strip().lower()
+    if v not in ("accept", "revise"):
+        return None, ['verdict must be "accept" or "revise"']
+
+    def strs(k: str) -> List[str]:
+        x = obj.get(k)
+        return [_clip(str(i), 400) for i in x[:8]] if isinstance(x, list) else []
+    adj = obj.get("confidence_adjustment", 0)
+    try:
+        adj = float(str(adj).replace(",", "."))
+    except ValueError:
+        adj = 0.0
+    adj = max(CRITIC_MAX_ADJ, min(0.0, adj))
+    checks = []
+    for c in (obj.get("missing_checks") if isinstance(obj.get("missing_checks"), list) else [])[:4]:
+        if isinstance(c, dict):
+            checks.append({k: _clip(str(c.get(k) or ""), 300) for k in ("tool", "args_hint", "why")})
+        elif isinstance(c, str):
+            checks.append({"tool": "", "args_hint": _clip(c, 300), "why": ""})
+    return {"verdict": v, "unsupported_claims": strs("unsupported_claims"), "untested_hypotheses": strs("untested_hypotheses"),
+            "confidence_adjustment": round(adj, 2), "missing_checks": checks}, []
+
+
 def _fmt_args(args: Any) -> str:
     s = json.dumps(args, ensure_ascii=False, separators=(",", ":"), default=str)
     return s if len(s) <= TOOL_ARGS_CHARS else s[:TOOL_ARGS_CHARS] + "..."
@@ -174,7 +248,8 @@ class InvestigationV2(Investigation):
     def __init__(self, llm: LLMClient, incident: dict, matches: List[dict], code_ctx: List[dict], executor: Executor,
                  *, budget: Optional[config.Budget] = None, system_prompt: Optional[str] = None,
                  on_step: Optional[Callable[[dict], None]] = None, resolved_text: str = "", baseline_text: str = "",
-                 card_text: str = "", extra_text: str = "", tool_fn: Optional[Callable[[str, dict], dict]] = None):
+                 card_text: str = "", extra_text: str = "", tool_fn: Optional[Callable[[str, dict], dict]] = None,
+                 plan: bool = True, critic: bool = True, use_checklist: bool = True):
         # NOTE: no super().__init__ (it builds the v1 prompts); the attributes below are the ones the inherited methods use.
         self.llm, self.inc, self.matches, self.executor = llm, incident, matches, executor
         self.budget = budget or executor.budget
@@ -194,6 +269,18 @@ class InvestigationV2(Investigation):
         self.card_decides = bool(card_text) and "DESTEKL" in card_text.upper() and "[confirmed" in card_text
         self.trim_events = 0
         self.tool_fn = tool_fn
+        off = lambda name: os.environ.get(name, "1").strip() == "0"          # noqa: E731 - kill switches: HIBOT_V2_PLAN / _CRITIC / _CHECKLIST = 0
+        plan, critic, use_checklist = plan and not off("HIBOT_V2_PLAN"), critic and not off("HIBOT_V2_CRITIC"), use_checklist and not off("HIBOT_V2_CHECKLIST")
+        self.plan_enabled, self.critic_enabled = plan, critic
+        self.plan: Optional[dict] = None
+        self.critic_info: Optional[dict] = None
+        self.critic_done = False
+        self.revision_round = False                 # the critic sent the model back for one more investigation round
+        self.calls: List[dict] = []                 # every dispatched tool call {tool, args, ok} (the checklist reads these)
+        self.checklist = checklist_mod.Checklist(checklist_mod.select(incident) if use_checklist else [], incident)
+        method = self.checklist.section()
+        if method:
+            extra_text = (extra_text + "\n\n" if extra_text else "") + method
         for c in code_ctx or []:
             executor._note_sources(c.get("result") if isinstance(c, dict) else None)
         catalog = executor.registry.catalog_text(executor.region)
@@ -298,13 +385,15 @@ class InvestigationV2(Investigation):
                 else:
                     obs = ex._run_sql({"sql": args["query"], "region": region, "why": why})
                 rec = obs.get("record")
-                return {"ok": bool(obs["ok"]), "text": _cut(obs["text"], self.budget.max_obs_chars), "query_no": rec["n"] if rec else None}
+                head = "(query #%d) " % rec["n"] if rec else ""         # the model cites ad-hoc SQL as "sql#N" so distinct queries stay distinct evidence
+                return {"ok": bool(obs["ok"]), "text": head + _cut(obs["text"], self.budget.max_obs_chars), "query_no": rec["n"] if rec else None}
             fn = self.tool_fn or registry.call_tool
             res = fn(name, args)
             ok = not (isinstance(res, dict) and res.get("ok") is False)
             extra = ""
             if ok and name == "read_file":
                 ex.sources_read += 1
+                ex.read_paths.append(str(args.get("path") or ""))
             if ok and name.startswith("graph_"):
                 ex._note_sources(res)
                 if name == "graph_trace_endpoint":
@@ -352,7 +441,8 @@ class InvestigationV2(Investigation):
             ref = str(ev.get("ref") or "")
             m = re.search(r"#(\d+)", ref)
             if m and int(m.group(1)) in by_no:
-                ev["ref"] = by_no[int(m.group(1))]
+                qid = by_no[int(m.group(1))]
+                ev["ref"] = "adhoc#%s" % m.group(1) if qid == "adhoc" else qid
                 continue
             if ref.split()[:1] and ref.split()[0] in ids or ref.lower().startswith(("ticket s", "ticket_window")):
                 continue
@@ -388,12 +478,99 @@ class InvestigationV2(Investigation):
                 "Run the missing checks NOW with tools (up to 3 per turn). If after honest reflection nothing is missing, resend your "
                 "final_report (refined where the checks taught you something)." % self.beyond_ok_calls)
 
+    # ------------------------------------------------------------ plan (step 0)
+    def _plan_phase(self) -> None:
+        """Turn 1 is a validated PLAN (hypotheses with confirm / refute observations + first tools); stored as step 0 and in the report."""
+        holder: Dict[str, Any] = {}
+
+        def check(o: Any) -> List[str]:
+            holder["plan"], errs = parse_plan(o)
+            return errs
+        try:
+            self.llm_calls += 1
+            obj, _raw, attempts = complete_json(self.llm, self._messages(PLAN_PROMPT), None, validator=check,
+                                                max_retries=self.budget.max_llm_retries, max_tokens=1800)
+            self.llm_calls += attempts - 1
+        except JsonRepairFailed as e:                                   # a missing plan must not kill the investigation
+            self.warnings.append("plan invalid: %s" % e)
+            return
+        self.plan = holder["plan"]
+        self._log_turn(0, {"plan": self.plan}, [], "PLAN ACCEPTED. Now execute it: call your first tools (up to %d independent tools per turn). "
+                                                 "Pay attention to the REQUIRED EVIDENCE CHECKLIST of the case file." % MAX_TOOLS_PER_TURN)
+
+    # ------------------------------------------------------------ critic (once, after the first accepted draft)
+    def _evidence_log(self) -> str:
+        """What really came back, compact: every executed query (baseline included) and every other tool call of the chat."""
+        L: List[str] = []
+        for q in self.executor.queries:
+            if not q.get("executed"):
+                L.append("#%s %s %s: NOT EXECUTED%s" % (q["n"], q["query_id"], json.dumps(q.get("params") or {}, ensure_ascii=False, default=str)[:140],
+                                                        " (%s)" % str(q.get("error"))[:80] if q.get("error") else ""))
+                continue
+            rows = "; ".join("|".join(_cut("" if c is None else str(c), 50) for c in r) for r in (q.get("rows") or [])[:3])
+            L.append("#%s %s %s -> %s rows. cols: %s. first rows: %s" % (
+                q["n"], q["query_id"] if q["query_id"] != "adhoc" else "sql: " + _cut(q.get("sql_display") or "", 220),
+                json.dumps(q.get("params") or {}, ensure_ascii=False, default=str)[:140] if q["query_id"] != "adhoc" else "",
+                q.get("row_count"), ",".join(q.get("columns") or [])[:160], rows[:300]))
+        for s in self.steps:
+            for c in s.get("calls") or []:
+                if c["tool"] in ("run_template", "sql"):
+                    continue
+                L.append("%s %s -> %s: %s" % (c["tool"], _fmt_args(c["args"]), "ok" if c["ok"] else "FAILED", _cut(c["text"].replace("\n", " "), 320)))
+        text = "\n".join(L)
+        return text if len(text) <= CRITIC_LOG_CHARS else text[:CRITIC_LOG_CHARS] + "\n...[evidence log shortened]"
+
+    def _critic_messages(self, rep: dict) -> List[Dict[str, str]]:
+        draft = {k: rep.get(k) for k in ("summary", "root_cause_type", "resolution_action", "root_cause", "confidence", "evidence", "fix_steps")}
+        parts = ["## TICKET %s\nsummary: %s\ndescription: %s" % (self.inc.get("key") or "(free text)", (self.inc.get("summary") or "")[:300],
+                                                               (self.inc.get("desc") or "")[:1200])]
+        if self.plan:
+            parts.append("## THE INVESTIGATOR'S PLAN (competing hypotheses)\n" + "\n".join(
+                "- %s | confirm: %s | refute: %s" % (h["h"], h["confirm_by"], h["refute_by"]) for h in self.plan["hypotheses"]))
+        parts.append("## EVIDENCE LOG (observations that really came back)\n" + self._evidence_log())
+        parts.append("## DRAFT REPORT\n" + json.dumps(draft, ensure_ascii=False, default=str)[:6000])
+        parts.append("Review it now. Reply with the JSON object only.")
+        return [{"role": "system", "content": CRITIC_SYSTEM}, {"role": "user", "content": "\n\n".join(parts)}]
+
+    def _critic(self, rep: dict) -> Optional[dict]:
+        holder: Dict[str, Any] = {}
+
+        def check(o: Any) -> List[str]:
+            holder["c"], errs = parse_critic(o)
+            return errs
+        try:
+            self.llm_calls += 1
+            _obj, _raw, attempts = complete_json(self.llm, self._critic_messages(rep), None, validator=check,
+                                                 max_retries=1, max_tokens=1500)
+            self.llm_calls += attempts - 1
+        except (JsonRepairFailed, LLMError) as e:                       # the critic is advisory: its failure must not fail the run
+            self.warnings.append("critic failed: %s" % str(e)[:160])
+            return None
+        return holder["c"]
+
+    @staticmethod
+    def _critic_text(c: dict) -> str:
+        L = ["CRITIC REVIEW (once; one more investigation round, then your final_report is final). A reviewer checked your draft against the evidence log:"]
+        for u in c["unsupported_claims"]:
+            L.append("- unsupported claim: " + u)
+        for u in c["untested_hypotheses"]:
+            L.append("- untested alternative: " + u)
+        L.append("Run these checks NOW (up to %d tools per turn), then resend your final_report corrected by what you learn:" % MAX_TOOLS_PER_TURN)
+        for m in c["missing_checks"]:
+            L.append("- %s %s%s" % (m["tool"], m["args_hint"], (" (settles: %s)" % m["why"]) if m["why"] else ""))
+        return "\n".join(L)
+
     # ------------------------------------------------------------ run
+    def _live(self) -> bool:
+        return self.executor.mode == "live"
+
     def run(self) -> dict:
         report = None
         seen: Dict[str, int] = {}
         b = self.budget
         try:
+            if self.plan_enabled:
+                self._plan_phase()
             for n in range(1, b.max_steps + 1):
                 if self.tool_calls >= b.max_tool_calls:
                     break
@@ -421,10 +598,28 @@ class InvestigationV2(Investigation):
                             text += chr(10) * 2 + self._depth_text()
                         self._log_turn(n, obj, [], text)
                         continue
+                    # skills as checklists: the required evidence of the selected skill(s) must exist (or be waived with a concrete reason)
+                    self.checklist.apply_waivers(rep.pop("checklist_waivers", None), self.executor.queries, self.calls, self._live())
+                    miss = self.checklist.missing(self.executor.queries, self.calls, self._live())
+                    if miss and self.checklist.refusals < checklist_mod.MAX_REFUSALS and n < b.max_steps and self.tool_calls < b.max_tool_calls:
+                        self.checklist.refusals += 1
+                        self._log_turn(n, obj, [], self.checklist.refusal_text(miss))
+                        continue
                     if self._depth_needed(n):
                         self.depth_check_used = True                 # once per run
                         self._log_turn(n, obj, [], self._depth_text())
                         continue
+                    if self.critic_enabled and not self.critic_done and self.executor.query_count + self.beyond_case_calls > 0:
+                        self.critic_done = True                      # ONE critic call per run
+                        crit = self._critic(rep)
+                        if crit:
+                            self.critic_info = crit
+                            can_revise = (crit["verdict"] == "revise" and crit["missing_checks"] and n < b.max_steps - 1
+                                          and self.tool_calls < b.max_tool_calls - 1)
+                            if can_revise:
+                                self.revision_round = True
+                                self._log_turn(n, obj, [], self._critic_text(crit))
+                                continue
                     report = actions.split_report(rep)
                     self._log_turn(n, obj, [], "(final report)")
                     break
@@ -441,6 +636,7 @@ class InvestigationV2(Investigation):
                         seen[key] = n
                         self.tool_calls += 1
                         r = self._dispatch(name, args, thought)
+                        self.calls.append({"tool": name, "args": args, "ok": bool(r["ok"])})
                         self.beyond_case_calls += name != "read_skill"
                         self.beyond_ok_calls += name != "read_skill" and bool(r["ok"])       # a failed call gathered nothing
                     calls.append(dict(r, tool=name, args=args))
@@ -456,8 +652,31 @@ class InvestigationV2(Investigation):
         except JsonRepairFailed as e:
             self.warnings.append("LLM output invalid: %s" % e)
             report = self._fallback("Model geçerli bir JSON yanıtı üretemedi: %s" % str(e)[:200])
+        report = self._finish_report(report)
         return {"report": self._ground(report), "steps": self.steps, "queries": self.executor.queries, "llm_calls": self.llm_calls,
                 "forced_final": self.forced, "warnings": self.warnings, "tool_calls": self.tool_calls}
+
+    def _finish_report(self, report: dict) -> dict:
+        """Attach plan / checklist / critic to the report and apply the critic's (negative) confidence adjustment before calibration."""
+        report = dict(report)
+        report.pop("checklist_waivers", None)
+        if self.plan:
+            report["plan"] = self.plan
+        if self.checklist.specs:
+            report["checklist"] = self.checklist.report_block(self.executor.queries, self.calls, self._live())
+        c = self.critic_info
+        if c:
+            adj = float(c.get("confidence_adjustment") or 0)
+            if self.revision_round:
+                adj *= 0.5                                           # the model already acted on the critique
+            applied = 0.0
+            if adj < 0 and not report.get("fallback"):
+                before = float(report.get("confidence") or 0)
+                report["confidence_before_critic"] = before
+                report["confidence"] = round(max(0.0, before + adj), 2)
+                applied = round(report["confidence"] - before, 2)
+            report["critic"] = dict(c, applied_adjustment=applied, revision_round=self.revision_round)
+        return report
 
     def _force_final(self) -> dict:
         self.forced = True

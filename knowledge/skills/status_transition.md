@@ -1,3 +1,12 @@
+---
+skill: status_transition
+problem_types: data_correction
+detector: status
+keywords: cancel|reject|re-?open|iptal|reddet|(?:change|set|move|put|revert)\W+(?:\w+\W+){0,4}?status|status\W+(?:change|update)
+required_evidence:
+- id: status_history | when: wo | description: What happened to the work order's status: history and field-change log (who / when, incl. direct DB updates) | satisfied_by: template:wo_status_timeline ; template:wo_field_changes
+- id: transition_check | when: wo | description: Is the requested transition configured for the tenant (Catalog.StatusStep)? | satisfied_by: template:status_step_check ; template:wo_status_transition_check
+---
 # Cannot change / cancel / reject / close; "please change status to …"
 
 ## Facts

@@ -305,9 +305,9 @@ class InvestigationTests(unittest.TestCase):
                   final(confidence=0.9, evidence=[{"type": "query", "ref": "wo_status_timeline", "finding": "x"},
                                                   {"type": "query", "ref": "wo_field_changes", "finding": "y"}])]
         _, out, _ = investigate(script, mode=LIVE, runner_factory=lambda r: R())
-        self.assertEqual(out["report"]["confidence"], 0.9)          # 2 independent executed supporting queries
+        self.assertEqual(out["report"]["confidence"], 0.85)         # 2 independent executed supporting queries: > 0.85 needs 3 (round 3)
         self.assertEqual(out["report"]["evidence"][0]["status"], "executed")
-        self.assertEqual(out["report"]["confidence_caps_applied"], [])
+        self.assertEqual([c["reason"] for c in out["report"]["confidence_caps_applied"]], ["needs_confirmed_card_or_3_independent_evidences"])
 
     def test_step_budget_forces_final_report(self):
         def respond(messages):

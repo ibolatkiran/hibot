@@ -1,3 +1,10 @@
+---
+skill: master_data_setup
+problem_types: master_data_request
+keywords: \bsku\b|product|model|labou?r|price group|defect code|warranty (type|period)|storage location|\bbom\b|spare part|material
+required_evidence:
+- id: chain_counts | description: Count the links of the chain the application uses to offer the item (product - tenant - labour / material - price group - defect / warranty) for the concrete item and tenant; the first link with 0 is the gap | satisfied_by: template:product_sku_lookup,product_labour_setup ; sql:ProductTenant|ProductMaterial|PriceGroup|Catalog\.Product|Defect|Warranty|Catalog\.Material
+---
 # Master data: missing product / SKU / tenant / labour / price / BOM / defect code / warranty type
 
 About 28% of tickets are master-data requests. The answer is usually "this definition is missing for this tenant"; the job is to prove **which link** is missing and **how wide** the gap is.

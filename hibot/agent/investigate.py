@@ -285,6 +285,10 @@ class Investigation:
                 if str(ev.get("ref", "")).lower().startswith(("ticket s", "ticket_window")):
                     ref = "wo_field_changes"                    # the model cited the deterministic ticket-window section
                 qs = by_id.get(ref)
+                m_ad = re.match(r"adhoc#(\d+)$", ref)
+                if m_ad:                                         # v2: ad-hoc SQL cited by query number
+                    qs = [q for q in by_id.get("adhoc", []) if q["n"] == int(m_ad.group(1))]
+                    ev["ref"] = "adhoc"
                 if not qs:
                     ev["status"] = "not_run"
                     ev["note"] = "Bu sorgu bu analizde hiç çalıştırılmadı/render edilmedi."
@@ -301,7 +305,7 @@ class Investigation:
         rep["executed_queries"] = executed
         rep["mode"] = self.executor.mode
         rep = axes.normalize(rep)
-        calibration.apply(rep, self.executor.queries)
+        calibration.apply(rep, self.executor.queries, inc=self.inc, code_reads=self.executor.read_paths)
         rep.setdefault("code_locations", [])
         rep.setdefault("verification_query_ids", [])
         return rep

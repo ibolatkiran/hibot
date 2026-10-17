@@ -1,3 +1,11 @@
+---
+skill: value_provenance
+keywords: (labou?r|price|cost|total|amount|discount|tutar|fiyat|işçilik|date|tarih)\b.{0,60}(\b0\b|zero|wrong|incorrect|missing|empty|blank|not (show|visible|display)|yanlış|gözük|görün)|not showing|not visible|shows 0
+required_evidence:
+- id: column_writers | description: Find who writes the value: column_writers on the table / column behind the screen field | satisfied_by: tool:column_writers
+- id: writer_sp_read | description: Read the SP / code that computes or sets the value, around the assignment (cite file:line) | satisfied_by: read_file:\.(sql|cs)$
+- id: inputs_query | description: Query the INPUTS of that computation for the concrete record(s) of the ticket (are the input rows there, with the expected flags / types?) | satisfied_by: sql:. ; template:wo_lines_totals,wo_detail_material_types,product_labour_setup,wo_discount_log,product_sku_lookup
+---
 # A value is 0 / wrong / missing: follow its provenance
 
 Use when the ticket says a cost, price, labour charge, total, date, status name or any displayed value is 0, wrong, empty or "not showing".

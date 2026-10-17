@@ -94,8 +94,18 @@ The LLM confidence is post-processed deterministically (in `Investigation._groun
 `confidence_raw` = LLM value, `confidence_caps_applied` = [{cap, reason, from, to}], `supporting_evidence` = what counted.
 Caps: 0.5 when no query was executed; 0.6 unless some evidence item points to an EXECUTED query with a non-empty relevant result (not
 `wo_locate`/`tenant_lookup`/`wo_header`; 0 rows count for `user_access_lookup`/`product_sku_lookup`), a supported card, or a ticket-window
-manual-fix finding; 0.8 unless a supported CONFIRMED card or >= 2 independent supporting evidences (distinct query ids; the ticket-window
-finding counts as `wo_field_changes`, a supported card as one more).
+manual-fix finding; 0.69 (round 3, was 0.8) unless a supported CONFIRMED card or >= 2 independent supporting evidences (distinct query ids / distinct
+ad-hoc queries / cited source files really read; the ticket-window finding counts as `wo_field_changes`, a supported card as one more);
+0.85 unless a supported CONFIRMED card or >= 3 independent evidences; 0.55 for `user_error` / `config` on a status or data-correction
+ticket whose ticket window shows NO status change (unless a supported card or a `status_step_check` that proves the transition missing);
+0.6 while required checklist evidence of the selected skill is missing (v2).
+
+### v2 loop additions (round 3)
+`checklist.py`: every symptom skill has a machine-readable header (`required_evidence`); the program selects up to 2 skills from the ticket,
+injects their text + checklist into the case file and refuses a `final_report` (max 2 times) while required evidence is missing
+(waivers with a concrete reason are recorded). `loop_v2.py`: turn 1 is a validated PLAN (step 0), one CRITIC call after the first accepted
+draft (`report.critic`; may send the model back for one more round; only lowers the confidence). Kill switches: `HIBOT_V2_PLAN=0`,
+`HIBOT_V2_CRITIC=0`, `HIBOT_V2_CHECKLIST=0`.
 
 ### Known-issue card (`knowledge/cards/<id>.json`, `cards.py`)
 `id, title, symptom_signature{problem_type, app, keywords[], entity_requirements[]}, root_cause, verification_queries[{query_id,

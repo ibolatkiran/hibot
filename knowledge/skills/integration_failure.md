@@ -1,3 +1,11 @@
+---
+skill: integration_failure
+problem_types: integration_failure
+keywords: \bsap\b|\berp\b|salesforce|atlas|\bmule\b|interface|integration|gateway|manusoft|\bfy\b
+required_evidence:
+- id: erp_state | when: wo | description: Per-document SAP / ERP state and RFC / REST call log of the work order | satisfied_by: template:wo_erp_sap,sap_rfc_rest_calls
+- id: queue_health | when: no_wo | description: No work order: job / outbound queue / DB error health around the ticket time (+-24 h) | satisfied_by: template:job_health,outbound_queue_backlog,db_errors_recent
+---
 # Integration failures: SAP / ERP / FY document / Salesforce / Atlas / Mule
 
 ## Facts

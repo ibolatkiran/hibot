@@ -98,6 +98,7 @@ class Executor:
         self.gating_done: set = set()          # endpoints whose UI gating is already in the case file
         self.known_sources: List[str] = []       # sources the case file / inspections pointed at (source-reading guard)
         self.sources_read = 0                    # successful read_source actions
+        self.read_paths: List[str] = []          # paths of those reads (round 3: cited code evidence counts for the calibration)
 
     # ------------------------------------------------------------- dispatch
     def execute(self, action: dict) -> dict:
@@ -261,6 +262,7 @@ class Executor:
         if not res["ok"]:
             return {"ok": False, "text": "%s REJECTED: %s" % (head, res["error"])}
         self.sources_read += 1
+        self.read_paths.append(str(a["path"]))
         return {"ok": True, "text": "%s lines %d-%d of %d%s\n%s" % (
             head, res["start_line"], res["end_line"], res["total_lines"],
             " (range capped)" if res["truncated"] else "", res["text"])}

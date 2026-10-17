@@ -149,36 +149,88 @@ class CalibrationTests(unittest.TestCase):
         r = self.run_cal(0.8, [ev("wo_erp_sap", 1)], [q(1, "wo_erp_sap", rows=0)])
         self.assertEqual(r["confidence"], 0.6)
         r = self.run_cal(0.7, [ev("user_access_lookup", 1)], [q(1, "user_access_lookup", rows=0)])
-        self.assertEqual(r["confidence"], 0.7)                                      # "user does not exist" IS the finding
+        self.assertEqual(r["confidence"], 0.69)                                     # "user does not exist" IS the finding (one evidence: < 0.7)
 
-    def test_single_support_caps_at_08_two_allow_more(self):
+    def test_single_support_caps_below_07_two_allow_085_three_more(self):
         one = self.run_cal(0.95, [ev("wo_status_timeline", 1)], [q(1, "wo_status_timeline")])
-        self.assertEqual(one["confidence"], 0.8)
+        self.assertEqual(one["confidence"], 0.69)
         two = self.run_cal(0.95, [ev("wo_status_timeline", 1), ev("status_step_check", 2)], [q(1, "wo_status_timeline"), q(2, "status_step_check")])
-        self.assertEqual(two["confidence"], 0.95)
-        self.assertEqual(two["confidence_caps_applied"], [])
+        self.assertEqual(two["confidence"], 0.85)
+        three = self.run_cal(0.95, [ev("wo_status_timeline", 1), ev("status_step_check", 2), ev("wo_erp_sap", 3)],
+                             [q(1, "wo_status_timeline"), q(2, "status_step_check"), q(3, "wo_erp_sap")])
+        self.assertEqual(three["confidence"], 0.95)
+        self.assertEqual(three["confidence_caps_applied"], [])
         same = self.run_cal(0.95, [ev("wo_status_timeline", 1), ev("wo_status_timeline", 2)],
                             [q(1, "wo_status_timeline"), q(2, "wo_status_timeline")])
-        self.assertEqual(same["confidence"], 0.8)                                    # not independent
+        self.assertEqual(same["confidence"], 0.69)                                   # not independent
+
+    def test_distinct_adhoc_queries_and_read_code_count_as_independent(self):
+        qs = [q(1, "adhoc"), q(2, "adhoc")]
+        two_sql = self.run_cal(0.8, [ev("adhoc", 1), ev("adhoc", 2)], qs)
+        self.assertEqual(two_sql["confidence"], 0.8)
+        code_ev = {"type": "code", "ref": "Sirius/dbo/SP.sql:19", "finding": "filter"}
+        unread = self.run_cal(0.8, [ev("adhoc", 1), code_ev], qs)
+        self.assertEqual(unread["confidence"], 0.69)                                 # the file was not READ in this run
+        rep = {"confidence": 0.8, "evidence": [ev("adhoc", 1), code_ev]}
+        calibration.apply(rep, qs, code_reads=["d:\\repos\\x\\Sirius\\dbo\\SP.sql"])
+        self.assertEqual(rep["confidence"], 0.8)
+        self.assertEqual(sorted(rep["supporting_evidence"]["query_ids"]), ["adhoc#1", "code:sp.sql"])
 
     def test_supported_confirmed_card_allows_high(self):
         card = {"type": "card", "ref": "c1", "finding": "f"}
         r = self.run_cal(0.9, [card], [q(1, "wo_header")], matched_card={"verdict": "supports", "card_status": "confirmed"})
         self.assertEqual(r["confidence"], 0.9)
         d = self.run_cal(0.9, [card], [q(1, "wo_header")], matched_card={"verdict": "supports", "card_status": "draft"})
-        self.assertEqual(d["confidence"], 0.8)
+        self.assertEqual(d["confidence"], 0.69)
         c = self.run_cal(0.9, [card], [q(1, "wo_header")], matched_card={"verdict": "contradicts", "card_status": "confirmed"})
         self.assertEqual(c["confidence"], 0.6)
 
     def test_ticket_window_manual_fix_supports(self):
         tw_ev = ev("wo_field_changes", 1, deterministic=True)
         r = self.run_cal(0.9, [tw_ev], [q(1, "wo_field_changes")], ticket_window_changes={"manual_fix": {"suspected": True}})
-        self.assertEqual(r["confidence"], 0.8)                                       # one independent finding
+        self.assertEqual(r["confidence"], 0.69)                                      # one independent finding
         r2 = self.run_cal(0.9, [tw_ev, ev("status_step_check", 2)], [q(1, "wo_field_changes"), q(2, "status_step_check")],
                           ticket_window_changes={"manual_fix": {"suspected": True}})
-        self.assertEqual(r2["confidence"], 0.9)
+        self.assertEqual(r2["confidence"], 0.85)
         r3 = self.run_cal(0.9, [tw_ev], [q(1, "wo_field_changes")], ticket_window_changes={"manual_fix": {"suspected": False}})
         self.assertEqual(r3["confidence"], 0.6)
+
+    def test_no_change_in_window_caps_user_error_and_config(self):
+        window = {"window": {"start_utc": "x"}, "status_changes": [], "changes": [], "manual_fix": {"suspected": False}}
+        inc = {"problem_type": "data_correction", "summary": "please change status", "desc": ""}
+        evs = [ev("wo_status_timeline", 1), ev("wo_erp_sap", 2), ev("wo_lines_totals", 3)]
+        qs = [q(1, "wo_status_timeline"), q(2, "wo_erp_sap"), q(3, "wo_lines_totals")]
+        for rct in ("user_error", "config"):
+            r = calibration.apply({"confidence": 0.9, "evidence": evs, "ticket_window_changes": window, "root_cause_type": rct}, qs, inc=inc)
+            self.assertEqual(r["confidence"], 0.55)
+            self.assertIn("no_change_in_ticket_window_is_not_evidence_of_" + rct, [c["reason"] for c in r["confidence_caps_applied"]])
+        other = calibration.apply({"confidence": 0.9, "evidence": evs, "ticket_window_changes": window, "root_cause_type": "master_data"}, qs, inc=inc)
+        self.assertEqual(other["confidence"], 0.9)                                   # other root causes are not touched
+        nowin = calibration.apply({"confidence": 0.9, "evidence": evs, "root_cause_type": "user_error"}, qs, inc=inc)
+        self.assertEqual(nowin["confidence"], 0.9)                                   # window not computed: rule does not apply
+        notstatus = calibration.apply({"confidence": 0.9, "evidence": evs, "ticket_window_changes": window, "root_cause_type": "user_error"}, qs,
+                                      inc={"problem_type": "functional_defect", "summary": "serial number", "desc": "cannot add"})
+        self.assertEqual(notstatus["confidence"], 0.9)
+        withchange = dict(window, status_changes=[{"old_status_id": "1"}])
+        changed = calibration.apply({"confidence": 0.9, "evidence": evs, "ticket_window_changes": withchange, "root_cause_type": "config"}, qs, inc=inc)
+        self.assertEqual(changed["confidence"], 0.9)
+
+    def test_no_change_exemptions_supported_card_and_proven_missing_transition(self):
+        window = {"window": {"start_utc": "x"}, "status_changes": [], "changes": [], "manual_fix": {"suspected": False}}
+        inc = {"problem_type": "data_correction", "summary": "change status", "desc": ""}
+        step = dict(q(2, "status_step_check"), columns=["FromStatusId", "NextStatusId", "IsRequestedTarget"], rows=[[1, 2, 0], [1, 3, 0]])
+        evs = [ev("wo_status_timeline", 1), ev("status_step_check", 2), ev("wo_erp_sap", 3)]
+        r = calibration.apply({"confidence": 0.8, "evidence": evs, "ticket_window_changes": window, "root_cause_type": "config"},
+                              [q(1, "wo_status_timeline"), step, q(3, "wo_erp_sap")], inc=inc)
+        self.assertEqual(r["confidence"], 0.8)                                       # transition proven missing
+        step_ok = dict(step, rows=[[1, 2, 1]])
+        r = calibration.apply({"confidence": 0.8, "evidence": evs, "ticket_window_changes": window, "root_cause_type": "config"},
+                              [q(1, "wo_status_timeline"), step_ok, q(3, "wo_erp_sap")], inc=inc)
+        self.assertEqual(r["confidence"], 0.55)                                      # transition IS configured: no support for config
+        card = {"verdict": "supports", "card_status": "draft"}
+        r = calibration.apply({"confidence": 0.8, "evidence": [ev("wo_status_timeline", 1)], "matched_card": card,
+                               "ticket_window_changes": window, "root_cause_type": "user_error"}, [q(1, "wo_status_timeline")], inc=inc)
+        self.assertEqual(r["confidence"], 0.8)                                       # a supported card exempts (card + 1 query = 2 evidences)
 
     def test_idempotent_and_low_confidence_untouched(self):
         r = self.run_cal(0.3, [], [q(1, "wo_header")])

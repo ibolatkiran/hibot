@@ -1,0 +1,1354 @@
+{
+ "meta": {
+  "version": 1,
+  "n": 40,
+  "label_kind": "silver (heuristic; not developer-verified)",
+  "set": "holdout2",
+  "classes": [
+   "code_defect",
+   "master_data",
+   "access",
+   "data_correction",
+   "integration",
+   "config",
+   "user_error",
+   "change_request",
+   "unknown"
+  ],
+  "axes_rules": "knowledge/eval/label_axes_rules.md"
+ },
+ "tickets": [
+  {
+   "key": "SM-1977792",
+   "split": "test",
+   "stratum": "status_footprint",
+   "region": "EU",
+   "problem_type": "data_correction",
+   "app": "crm",
+   "expected_work_order_ids": [
+    22125755
+   ],
+   "expected_tenant_id": 70,
+   "expected_classification": "data_correction",
+   "label_confidence": "medium",
+   "label_basis": "footprint: manual fix 2271->2284, transition not in StatusStep",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 22125755,
+     "tenant_id": 70
+    },
+    {
+     "type": "manual_fix_detected",
+     "from": 2271,
+     "to": 2284
+    },
+    {
+     "type": "transition_missing",
+     "tenant_id": 70,
+     "from": 2271,
+     "to": 2284
+    }
+   ],
+   "needs_human_review": false,
+   "note": "WO closed by mistake; asks to move it to Beko Approved; status forced in DB",
+   "expected_root_cause_type": "config",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8a"
+  },
+  {
+   "key": "SM-1980996",
+   "split": "test",
+   "stratum": "status_footprint",
+   "region": "EU",
+   "problem_type": "data_correction",
+   "app": "portal",
+   "expected_work_order_ids": [
+    22133232
+   ],
+   "expected_tenant_id": 70,
+   "expected_classification": "data_correction",
+   "label_confidence": "medium",
+   "label_basis": "footprint: manual fix 2275->2284, transition not in StatusStep",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 22133232,
+     "tenant_id": 70
+    },
+    {
+     "type": "manual_fix_detected",
+     "from": 2275,
+     "to": 2284
+    },
+    {
+     "type": "transition_missing",
+     "tenant_id": 70,
+     "from": 2275,
+     "to": 2284
+    }
+   ],
+   "needs_human_review": false,
+   "note": "asks status Beko Approved for a closed WO; status forced in DB",
+   "expected_root_cause_type": "config",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8a"
+  },
+  {
+   "key": "SM-2044656",
+   "split": "test",
+   "stratum": "status_footprint",
+   "region": "EU",
+   "problem_type": "data_correction",
+   "app": "portal",
+   "expected_work_order_ids": [
+    22468457,
+    22394657
+   ],
+   "expected_tenant_id": 52,
+   "expected_classification": "data_correction",
+   "label_confidence": "medium",
+   "label_basis": "footprint: manual fix 651->638 (step exists), no history row",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 22468457,
+     "tenant_id": 52
+    },
+    {
+     "type": "manual_fix_detected",
+     "from": 651,
+     "to": 638
+    }
+   ],
+   "needs_human_review": false,
+   "note": "asks to reject two WOs; status forced in DB",
+   "expected_root_cause_type": "data_issue",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8b"
+  },
+  {
+   "key": "SM-2103087",
+   "split": "test",
+   "stratum": "status_footprint",
+   "region": "EU",
+   "problem_type": "data_correction",
+   "app": "crm",
+   "expected_work_order_ids": [
+    22152920
+   ],
+   "expected_tenant_id": 81,
+   "expected_classification": "data_correction",
+   "label_confidence": "medium",
+   "label_basis": "footprint: manual fix 896->901, transition not in StatusStep",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 22152920,
+     "tenant_id": 81
+    },
+    {
+     "type": "manual_fix_detected",
+     "from": 896,
+     "to": 901
+    },
+    {
+     "type": "transition_missing",
+     "tenant_id": 81,
+     "from": 896,
+     "to": 901
+    }
+   ],
+   "needs_human_review": false,
+   "note": "asks to move an exchange-approved WO to rejected; status forced in DB",
+   "expected_root_cause_type": "config",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8a"
+  },
+  {
+   "key": "SM-2139680",
+   "split": "test",
+   "stratum": "status_footprint",
+   "region": "EU",
+   "problem_type": "data_correction",
+   "app": "crm",
+   "expected_work_order_ids": [
+    22863221
+   ],
+   "expected_tenant_id": 80,
+   "expected_classification": "data_correction",
+   "label_confidence": "medium",
+   "label_basis": "footprint: manual fix 2232->704, transition not in StatusStep",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 22863221,
+     "tenant_id": 80
+    },
+    {
+     "type": "manual_fix_detected",
+     "from": 2232,
+     "to": 704
+    },
+    {
+     "type": "transition_missing",
+     "tenant_id": 80,
+     "from": 2232,
+     "to": 704
+    }
+   ],
+   "needs_human_review": false,
+   "note": "asks to put a WO back to New Application; status forced in DB",
+   "expected_root_cause_type": "config",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8a"
+  },
+  {
+   "key": "SM-1969942",
+   "split": "test",
+   "stratum": "status_footprint",
+   "region": "EU",
+   "problem_type": "data_correction",
+   "app": "crm",
+   "expected_work_order_ids": [
+    22160280
+   ],
+   "expected_tenant_id": 46,
+   "expected_classification": "data_correction",
+   "label_confidence": "medium",
+   "label_basis": "footprint: manual fix 1123->848, transition not in StatusStep",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 22160280,
+     "tenant_id": 46
+    },
+    {
+     "type": "manual_fix_detected",
+     "from": 1123,
+     "to": 848
+    },
+    {
+     "type": "transition_missing",
+     "tenant_id": 46,
+     "from": 1123,
+     "to": 848
+    }
+   ],
+   "needs_human_review": false,
+   "note": "technician could not change a WO status; status forced in DB",
+   "expected_root_cause_type": "config",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8a"
+  },
+  {
+   "key": "SM-1802347",
+   "split": "test",
+   "stratum": "status_nochange",
+   "region": "EU",
+   "problem_type": "data_correction",
+   "app": "other:contact",
+   "expected_work_order_ids": [
+    2446032
+   ],
+   "expected_tenant_id": 49,
+   "expected_classification": "data_correction",
+   "label_confidence": "medium",
+   "label_basis": "status change request, comment 'solved'; no change inside window",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 2446032,
+     "tenant_id": 49
+    },
+    {
+     "type": "no_manual_fix"
+    }
+   ],
+   "needs_human_review": false,
+   "note": "asks status Financed for a WO",
+   "expected_root_cause_type": "unknown",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8c"
+  },
+  {
+   "key": "SM-1871288",
+   "split": "test",
+   "stratum": "status_nochange",
+   "region": "EU",
+   "problem_type": "data_correction",
+   "app": "other:contact",
+   "expected_work_order_ids": [
+    2613969
+   ],
+   "expected_tenant_id": 49,
+   "expected_classification": "data_correction",
+   "label_confidence": "medium",
+   "label_basis": "status change request, comment 'solved'; no change inside window",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 2613969,
+     "tenant_id": 49
+    },
+    {
+     "type": "no_manual_fix"
+    }
+   ],
+   "needs_human_review": false,
+   "note": "asks status New for a WO",
+   "expected_root_cause_type": "unknown",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8c"
+  },
+  {
+   "key": "SM-1943978",
+   "split": "test",
+   "stratum": "status_nochange",
+   "region": "EU",
+   "problem_type": "data_correction",
+   "app": "portal",
+   "expected_work_order_ids": [
+    16587331,
+    19244828,
+    22084169
+   ],
+   "expected_tenant_id": 117,
+   "expected_classification": "data_correction",
+   "label_confidence": "medium",
+   "label_basis": "bulk status change request, comment 'solved'; no change inside window",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 16587331,
+     "tenant_id": 117
+    },
+    {
+     "type": "no_manual_fix"
+    }
+   ],
+   "needs_human_review": false,
+   "note": "asks status Repair Completed for several WOs",
+   "expected_root_cause_type": "unknown",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8c"
+  },
+  {
+   "key": "SM-1957195",
+   "split": "test",
+   "stratum": "status_nochange",
+   "region": "EU",
+   "problem_type": "data_correction",
+   "app": "portal",
+   "expected_work_order_ids": [
+    16535610,
+    16547731,
+    16560203
+   ],
+   "expected_tenant_id": 80,
+   "expected_classification": "data_correction",
+   "label_confidence": "medium",
+   "label_basis": "status change request, comment 'changed'; no change inside window",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 16535610,
+     "tenant_id": 80
+    },
+    {
+     "type": "no_manual_fix"
+    }
+   ],
+   "needs_human_review": false,
+   "note": "asks status New Application for several WOs",
+   "expected_root_cause_type": "unknown",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8c"
+  },
+  {
+   "key": "SM-2039109",
+   "split": "test",
+   "stratum": "status_nochange",
+   "region": "EU",
+   "problem_type": "data_correction",
+   "app": "portal",
+   "expected_work_order_ids": [
+    16447384,
+    16402626
+   ],
+   "expected_tenant_id": 46,
+   "expected_classification": "data_correction",
+   "label_confidence": "medium",
+   "label_basis": "WOs in a wrong status, comment 'changed'; no change inside window",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 16447384,
+     "tenant_id": 46
+    },
+    {
+     "type": "no_manual_fix"
+    }
+   ],
+   "needs_human_review": false,
+   "note": "asks to fix WOs that ended in Exchange FI Created",
+   "expected_root_cause_type": "unknown",
+   "expected_resolution_action": "data_fix",
+   "axes_rule": "R8c"
+  },
+  {
+   "key": "SM-1839332",
+   "split": "test",
+   "stratum": "functional_defect",
+   "region": "EU",
+   "problem_type": "functional_defect",
+   "app": "portal",
+   "expected_work_order_ids": [
+    16365520,
+    20500588
+   ],
+   "expected_tenant_id": 49,
+   "expected_classification": "master_data",
+   "label_confidence": "medium",
+   "label_basis": "comment: price group of the material not yet entered, so it is not visible",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 16365520,
+     "tenant_id": 49
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "price",
+      "material"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "newly defined material code cannot be selected in Sirius",
+   "expected_root_cause_type": "master_data",
+   "expected_resolution_action": "master_data_change",
+   "axes_rule": "R1"
+  },
+  {
+   "key": "SM-1934122",
+   "split": "test",
+   "stratum": "functional_defect",
+   "region": "EU",
+   "problem_type": "functional_defect",
+   "app": "portal",
+   "expected_work_order_ids": [
+    16586310
+   ],
+   "expected_tenant_id": 58,
+   "expected_classification": "master_data",
+   "label_confidence": "medium",
+   "label_basis": "comment: price definitions missing for these materials for this service shop",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 16586310,
+     "tenant_id": 58
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "price",
+      "material"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "two materials cannot be selected on a Moldova WO",
+   "expected_root_cause_type": "master_data",
+   "expected_resolution_action": "master_data_change",
+   "axes_rule": "R1"
+  },
+  {
+   "key": "SM-1870003",
+   "split": "test",
+   "stratum": "functional_defect",
+   "region": "EU",
+   "problem_type": "functional_defect",
+   "app": "crm",
+   "expected_work_order_ids": [
+    16482761,
+    16376742,
+    16333200
+   ],
+   "expected_tenant_id": 46,
+   "expected_classification": "user_error",
+   "label_confidence": "medium",
+   "label_basis": "comment: product history empty because the WO has no production year/month; feature filters those out",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 16482761,
+     "tenant_id": 46
+    },
+    {
+     "type": "not_code_defect"
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "production",
+      "history"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "repair history of a product not shown",
+   "expected_root_cause_type": "user_error",
+   "expected_resolution_action": "explain_to_user",
+   "axes_rule": "R3"
+  },
+  {
+   "key": "SM-2080016",
+   "split": "test",
+   "stratum": "functional_defect",
+   "region": "EU",
+   "problem_type": "functional_defect",
+   "app": "crm",
+   "expected_work_order_ids": [
+    22686185
+   ],
+   "expected_tenant_id": 53,
+   "expected_classification": "config",
+   "label_confidence": "medium",
+   "label_basis": "comment: service shop sits in a WHP labour-tariff payment group; payment group has to change",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 22686185,
+     "tenant_id": 53
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "payment group",
+      "tariff",
+      "labour"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "labour options for a Beko-defined appliance not offered",
+   "expected_root_cause_type": "config",
+   "expected_resolution_action": "config_change",
+   "axes_rule": "R6"
+  },
+  {
+   "key": "SM-1881470",
+   "split": "test",
+   "stratum": "functional_defect",
+   "region": "EU",
+   "problem_type": "functional_defect",
+   "app": "portal",
+   "expected_work_order_ids": [
+    16486432,
+    16432612
+   ],
+   "expected_tenant_id": 49,
+   "expected_classification": "user_error",
+   "label_confidence": "medium",
+   "label_basis": "comment: Whirlpool serial format is XXYYMMSSSSSS; entered format differs",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 16486432,
+     "tenant_id": 49
+    },
+    {
+     "type": "not_code_defect"
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "serial"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "serial number cannot be added on a service call",
+   "expected_root_cause_type": "user_error",
+   "expected_resolution_action": "explain_to_user",
+   "axes_rule": "R3"
+  },
+  {
+   "key": "SM-1979237",
+   "split": "test",
+   "stratum": "functional_defect",
+   "region": "EU",
+   "problem_type": "functional_defect",
+   "app": "crm",
+   "expected_work_order_ids": [
+    16523504
+   ],
+   "expected_tenant_id": 58,
+   "expected_classification": "user_error",
+   "label_confidence": "medium",
+   "label_basis": "comment: serial entered in Sirius differs from the one on the product",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 16523504,
+     "tenant_id": 58
+    },
+    {
+     "type": "not_code_defect"
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "serial"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "serial number cannot be added on a Moldova call",
+   "expected_root_cause_type": "user_error",
+   "expected_resolution_action": "explain_to_user",
+   "axes_rule": "R3"
+  },
+  {
+   "key": "SM-1886324",
+   "split": "test",
+   "stratum": "functional_defect",
+   "region": "EU",
+   "problem_type": "functional_defect",
+   "app": "crm",
+   "expected_work_order_ids": [
+    20539098
+   ],
+   "expected_tenant_id": 70,
+   "expected_classification": "master_data",
+   "label_confidence": "medium",
+   "label_basis": "comment: no warranty period defined for the chosen warranty type; period added for the product",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 20539098,
+     "tenant_id": 70
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "warranty"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "wrong warranty type on a WC, cannot be resolved",
+   "expected_root_cause_type": "master_data",
+   "expected_resolution_action": "master_data_change",
+   "axes_rule": "R1"
+  },
+  {
+   "key": "SM-1924609",
+   "split": "test",
+   "stratum": "integration_failure",
+   "region": "EU",
+   "problem_type": "integration_failure",
+   "app": "portal",
+   "expected_work_order_ids": [
+    16548751
+   ],
+   "expected_tenant_id": 58,
+   "expected_classification": "integration",
+   "label_confidence": "medium",
+   "label_basis": "comment: material is in neither Manusoft nor Sirius; must be added in SAP",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 16548751,
+     "tenant_id": 58
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "sap"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "part defined in SAP cannot be selected in Sirius",
+   "expected_root_cause_type": "integration",
+   "expected_resolution_action": "escalate_other_system",
+   "axes_rule": "R5a"
+  },
+  {
+   "key": "SM-1960355",
+   "split": "test",
+   "stratum": "integration_failure",
+   "region": "EU",
+   "problem_type": "integration_failure",
+   "app": "portal",
+   "expected_work_order_ids": [
+    22209257
+   ],
+   "expected_tenant_id": 46,
+   "expected_classification": "integration",
+   "label_confidence": "medium",
+   "label_basis": "comment: material must be defined in the right plant / sales area in SAP",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 22209257,
+     "tenant_id": 46
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "sap",
+      "material"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "material order problem: part data in SAP, order fails",
+   "expected_root_cause_type": "integration",
+   "expected_resolution_action": "escalate_other_system",
+   "axes_rule": "R5a"
+  },
+  {
+   "key": "SM-1976131",
+   "split": "test",
+   "stratum": "integration_failure",
+   "region": "EU",
+   "problem_type": "integration_failure",
+   "app": "portal",
+   "expected_work_order_ids": [
+    22204771,
+    22098440,
+    22238470
+   ],
+   "expected_tenant_id": 46,
+   "expected_classification": "integration",
+   "label_confidence": "medium",
+   "label_basis": "comment: SAP shows no stock at the storage location for the exchange material",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 22204771,
+     "tenant_id": 46
+    },
+    {
+     "type": "manual_fix_detected",
+     "from": 867,
+     "to": 840
+    },
+    {
+     "type": "transition_missing",
+     "tenant_id": 46,
+     "from": 867,
+     "to": 840
+    }
+   ],
+   "needs_human_review": false,
+   "note": "exchange not sent to SAP (four WOs stuck)",
+   "expected_root_cause_type": "integration",
+   "expected_resolution_action": "escalate_other_system",
+   "axes_rule": "R5a"
+  },
+  {
+   "key": "SM-1905442",
+   "split": "test",
+   "stratum": "integration_failure",
+   "region": "EU",
+   "problem_type": "integration_failure",
+   "app": "portal",
+   "expected_work_order_ids": [
+    16620291,
+    16620897
+   ],
+   "expected_tenant_id": 68,
+   "expected_classification": "integration",
+   "label_confidence": "low",
+   "label_basis": "comment: preventive action on Sirius and SAP side against duplicate SAP orders",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 16620291,
+     "tenant_id": 68
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "sap",
+      "order"
+     ]
+    }
+   ],
+   "needs_human_review": true,
+   "note": "one spare order creates several SAP orders",
+   "expected_root_cause_type": "integration",
+   "expected_resolution_action": "escalate_other_system",
+   "axes_rule": "R5a"
+  },
+  {
+   "key": "SM-1917116",
+   "split": "test",
+   "stratum": "integration_failure",
+   "region": "EU",
+   "problem_type": "integration_failure",
+   "app": "crm",
+   "expected_work_order_ids": [
+    16631258
+   ],
+   "expected_tenant_id": 46,
+   "expected_classification": "user_error",
+   "label_confidence": "medium",
+   "label_basis": "comment: process is to select exchange type first, then update status",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 16631258,
+     "tenant_id": 46
+    },
+    {
+     "type": "not_code_defect"
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "exchange"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "product exchange not transferred to SAP",
+   "expected_root_cause_type": "user_error",
+   "expected_resolution_action": "explain_to_user",
+   "axes_rule": "R3"
+  },
+  {
+   "key": "SM-2083959",
+   "split": "test",
+   "stratum": "master_data_request",
+   "region": "EU",
+   "problem_type": "master_data_request",
+   "app": "crm",
+   "expected_work_order_ids": [
+    22587801,
+    22691035,
+    22715355
+   ],
+   "expected_tenant_id": 68,
+   "expected_classification": "master_data",
+   "label_confidence": "high",
+   "label_basis": "ticket asks to load an SKU; 'added'",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 22587801,
+     "tenant_id": 68
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "sku",
+      "product"
+     ]
+    },
+    {
+     "type": "query_used",
+     "query_id": "product_sku_lookup"
+    }
+   ],
+   "needs_human_review": false,
+   "note": "asks to add an SKU for South Africa",
+   "expected_root_cause_type": "master_data",
+   "expected_resolution_action": "master_data_change",
+   "axes_rule": "R1"
+  },
+  {
+   "key": "SM-2103728",
+   "split": "test",
+   "stratum": "master_data_request",
+   "region": "EU",
+   "problem_type": "master_data_request",
+   "app": "portal",
+   "expected_work_order_ids": [
+    22877944
+   ],
+   "expected_tenant_id": 68,
+   "expected_classification": "master_data",
+   "label_confidence": "high",
+   "label_basis": "ticket asks to register SKU and part list for a model; solved",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 22877944,
+     "tenant_id": 68
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "sku",
+      "part"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "asks to register an SKU and part list",
+   "expected_root_cause_type": "master_data",
+   "expected_resolution_action": "master_data_change",
+   "axes_rule": "R1"
+  },
+  {
+   "key": "SM-2029368",
+   "split": "test",
+   "stratum": "master_data_request",
+   "region": "EU",
+   "problem_type": "master_data_request",
+   "app": "portal",
+   "expected_work_order_ids": [
+    22512269
+   ],
+   "expected_tenant_id": 54,
+   "expected_classification": "master_data",
+   "label_confidence": "high",
+   "label_basis": "ticket asks to add an SKU for a WO in Slovenia; 'added'",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 22512269,
+     "tenant_id": 54
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "sku"
+     ]
+    },
+    {
+     "type": "query_used",
+     "query_id": "product_sku_lookup"
+    }
+   ],
+   "needs_human_review": false,
+   "note": "asks to add one SKU for Slovenia",
+   "expected_root_cause_type": "master_data",
+   "expected_resolution_action": "master_data_change",
+   "axes_rule": "R1"
+  },
+  {
+   "key": "SM-2121046",
+   "split": "test",
+   "stratum": "master_data_request",
+   "region": "EU",
+   "problem_type": "master_data_request",
+   "app": "other:manusoft",
+   "expected_work_order_ids": [
+    22973254
+   ],
+   "expected_tenant_id": 81,
+   "expected_classification": "master_data",
+   "label_confidence": "high",
+   "label_basis": "comment: product data missing in the Sirius DB; added",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 22973254,
+     "tenant_id": 81
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "sku",
+      "product"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "product cannot be reached on a WO in Azerbaijan",
+   "expected_root_cause_type": "master_data",
+   "expected_resolution_action": "master_data_change",
+   "axes_rule": "R1"
+  },
+  {
+   "key": "SM-2065664",
+   "split": "test",
+   "stratum": "master_data_request",
+   "region": "EU",
+   "problem_type": "master_data_request",
+   "app": "partner",
+   "expected_work_order_ids": [
+    22467952,
+    22197978,
+    22557388
+   ],
+   "expected_tenant_id": 80,
+   "expected_classification": "master_data",
+   "label_confidence": "medium",
+   "label_basis": "comment: products had empty commercial-code values; corrected, labour list restored",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 22467952,
+     "tenant_id": 80
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "labour",
+      "hierarchy",
+      "commercial"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "labour list missing on a Bosnia WO",
+   "expected_root_cause_type": "master_data",
+   "expected_resolution_action": "master_data_change",
+   "axes_rule": "R1"
+  },
+  {
+   "key": "SM-1954815",
+   "split": "test",
+   "stratum": "master_data_request",
+   "region": "EU",
+   "problem_type": "master_data_request",
+   "app": "portal",
+   "expected_work_order_ids": [],
+   "expected_tenant_id": null,
+   "expected_classification": "master_data",
+   "label_confidence": "high",
+   "label_basis": "ticket asks to add product description and tenants for an SKU; solved",
+   "expected_findings": [
+    {
+     "type": "mentions",
+     "any": [
+      "sku",
+      "tenant",
+      "product"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "asks to add description and tenant for an SKU",
+   "expected_root_cause_type": "master_data",
+   "expected_resolution_action": "master_data_change",
+   "axes_rule": "R1"
+  },
+  {
+   "key": "SM-1831956",
+   "split": "test",
+   "stratum": "access_request",
+   "region": "EU",
+   "problem_type": "access_request",
+   "app": "portal",
+   "expected_work_order_ids": [],
+   "expected_tenant_id": null,
+   "expected_classification": "access",
+   "label_confidence": "high",
+   "label_basis": "comment: account was activated",
+   "expected_findings": [
+    {
+     "type": "mentions",
+     "any": [
+      "user",
+      "account",
+      "login"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "business partner cannot log in; account inactive",
+   "expected_root_cause_type": "access",
+   "expected_resolution_action": "grant_access",
+   "axes_rule": "R2"
+  },
+  {
+   "key": "SM-1829822",
+   "split": "test",
+   "stratum": "access_request",
+   "region": "EU",
+   "problem_type": "access_request",
+   "app": "portal",
+   "expected_work_order_ids": [],
+   "expected_tenant_id": null,
+   "expected_classification": "access",
+   "label_confidence": "medium",
+   "label_basis": "comment: user added with the registry-based login instead of the D user",
+   "expected_findings": [
+    {
+     "type": "mentions",
+     "any": [
+      "user",
+      "log",
+      "access"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "cannot log on CRM and Portal",
+   "expected_root_cause_type": "access",
+   "expected_resolution_action": "grant_access",
+   "axes_rule": "R2"
+  },
+  {
+   "key": "SM-1850411",
+   "split": "test",
+   "stratum": "access_request",
+   "region": "EU",
+   "problem_type": "access_request",
+   "app": "portal",
+   "expected_work_order_ids": [],
+   "expected_tenant_id": null,
+   "expected_classification": "access",
+   "label_confidence": "medium",
+   "label_basis": "comment: user must be registered via Employee menu; Okta authorization to follow",
+   "expected_findings": [
+    {
+     "type": "mentions",
+     "any": [
+      "user",
+      "okta",
+      "access",
+      "authoriz"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "asks for access to Sirius",
+   "expected_root_cause_type": "access",
+   "expected_resolution_action": "grant_access",
+   "axes_rule": "R2"
+  },
+  {
+   "key": "SM-1824360",
+   "split": "test",
+   "stratum": "access_request",
+   "region": "EU",
+   "problem_type": "access_request",
+   "app": "portal",
+   "expected_work_order_ids": [],
+   "expected_tenant_id": null,
+   "expected_classification": "access",
+   "label_confidence": "medium",
+   "label_basis": "comment: Sirius Okta authorization already exists; request is Okta-side",
+   "expected_findings": [
+    {
+     "type": "mentions",
+     "any": [
+      "user",
+      "okta",
+      "access",
+      "authoriz"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "cannot log in to Sirius",
+   "expected_root_cause_type": "access",
+   "expected_resolution_action": "grant_access",
+   "axes_rule": "R2"
+  },
+  {
+   "key": "SM-2042803",
+   "split": "test",
+   "stratum": "notification_failure",
+   "region": "EU",
+   "problem_type": "notification_failure",
+   "app": "portal",
+   "expected_work_order_ids": [],
+   "expected_tenant_id": null,
+   "expected_classification": "config",
+   "label_confidence": "medium",
+   "label_basis": "comment: misconfiguration in the email job, fixed",
+   "expected_findings": [
+    {
+     "type": "mentions",
+     "any": [
+      "email",
+      "notification",
+      "job"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "notification emails not sent for Ukraine",
+   "expected_root_cause_type": "config",
+   "expected_resolution_action": "config_change",
+   "axes_rule": "R6"
+  },
+  {
+   "key": "SM-1931803",
+   "split": "test",
+   "stratum": "notification_failure",
+   "region": "EU",
+   "problem_type": "notification_failure",
+   "app": "portal",
+   "expected_work_order_ids": [
+    16659035
+   ],
+   "expected_tenant_id": 46,
+   "expected_classification": "integration",
+   "label_confidence": "medium",
+   "label_basis": "comment: SMS provider changed its route, then NPS SMS delivered",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 16659035,
+     "tenant_id": 46
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "sms",
+      "nps",
+      "provider",
+      "route"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "NPS survey SMS not received by customers",
+   "expected_root_cause_type": "integration",
+   "expected_resolution_action": "unknown",
+   "axes_rule": "R5b"
+  },
+  {
+   "key": "SM-2105830",
+   "split": "test",
+   "stratum": "notification_failure",
+   "region": "EU",
+   "problem_type": "notification_failure",
+   "app": "portal",
+   "expected_work_order_ids": [],
+   "expected_tenant_id": null,
+   "expected_classification": "user_error",
+   "label_confidence": "medium",
+   "label_basis": "comment: Sirius side shows nothing wrong; recipient domain / mail log to be checked",
+   "expected_findings": [
+    {
+     "type": "not_code_defect"
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "notification",
+      "mail",
+      "email"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "notification mails not received though report is fine",
+   "expected_root_cause_type": "user_error",
+   "expected_resolution_action": "explain_to_user",
+   "axes_rule": "R3"
+  },
+  {
+   "key": "SM-1932075",
+   "split": "test",
+   "stratum": "notification_failure",
+   "region": "EU",
+   "problem_type": "notification_failure",
+   "app": "other:atlas",
+   "expected_work_order_ids": [],
+   "expected_tenant_id": null,
+   "expected_classification": "integration",
+   "label_confidence": "medium",
+   "label_basis": "comment: counts consistent at the source; the Atlas side should be reviewed",
+   "expected_findings": [
+    {
+     "type": "mentions",
+     "any": [
+      "nps",
+      "atlas"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "NPS survey data in Atlas looks wrong",
+   "expected_root_cause_type": "integration",
+   "expected_resolution_action": "escalate_other_system",
+   "axes_rule": "R5a"
+  },
+  {
+   "key": "SM-2071460",
+   "split": "test",
+   "stratum": "performance_report",
+   "region": "EU",
+   "problem_type": "performance_availability",
+   "app": "portal",
+   "expected_work_order_ids": [],
+   "expected_tenant_id": null,
+   "expected_classification": "user_error",
+   "label_confidence": "medium",
+   "label_basis": "comment: tests on the report found no issue; download works",
+   "expected_findings": [
+    {
+     "type": "not_code_defect"
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "report"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "SAP integration failed-docs report downloads empty",
+   "expected_root_cause_type": "user_error",
+   "expected_resolution_action": "explain_to_user",
+   "axes_rule": "R3"
+  },
+  {
+   "key": "SM-1833067",
+   "split": "test",
+   "stratum": "performance_report",
+   "region": "EU",
+   "problem_type": "performance_availability",
+   "app": "portal",
+   "expected_work_order_ids": [],
+   "expected_tenant_id": null,
+   "expected_classification": "user_error",
+   "label_confidence": "medium",
+   "label_basis": "comment: checks done, no problem found",
+   "expected_findings": [
+    {
+     "type": "not_code_defect"
+    }
+   ],
+   "needs_human_review": false,
+   "note": "blank screen on portal log-on",
+   "expected_root_cause_type": "user_error",
+   "expected_resolution_action": "explain_to_user",
+   "axes_rule": "R3"
+  },
+  {
+   "key": "SM-2059766",
+   "split": "test",
+   "stratum": "performance_report",
+   "region": "EU",
+   "problem_type": "performance_availability",
+   "app": "technician",
+   "expected_work_order_ids": [],
+   "expected_tenant_id": null,
+   "expected_classification": "unknown",
+   "label_confidence": "low",
+   "label_basis": "support found no problem with the user; instability complaints continue",
+   "expected_findings": [
+    {
+     "type": "mentions",
+     "any": [
+      "freeze",
+      "unstable",
+      "slow",
+      "performance"
+     ]
+    }
+   ],
+   "needs_human_review": true,
+   "note": "technician app freezes for many technicians",
+   "expected_root_cause_type": "unknown",
+   "expected_resolution_action": "unknown",
+   "axes_rule": "R7"
+  }
+ ]
+}

@@ -62,6 +62,8 @@ def mkv2(script, mode=LIVE, budget=None, inc=None, tool_fn=None, data=None, runn
                   runner_factory=lambda r: runner_cls(r, log, SM_DATA if data is None else data))
     llm = FakeLLM(script, default=kw.pop("default", None))
     depth = kw.pop("depth", False)                                  # the self-check guard is tested on its own
+    for k in ("plan", "critic", "use_checklist"):                   # round-3 features are tested on their own (default: off here)
+        kw.setdefault(k, False)
     inv = InvestigationV2(llm, inc or incident(), [], [], ex, budget=budget, tool_fn=tool_fn or fake_tools(), **kw)
     inv.depth_check_used = not depth
     return llm, inv, ex, log
@@ -159,7 +161,7 @@ class DispatchTests(unittest.TestCase):
         obs = llm.calls[1]["messages"][-1]["content"]                # the observation goes back as a user message
         self.assertTrue(obs.startswith("OBSERVATION (step 1)"))
         self.assertIn("RESULT 1/1  code_search", obs)
-        self.assertIn("Budget: step 1/18, tool calls 1/30", obs)
+        self.assertIn("Budget: step 1/22, tool calls 1/30", obs)
 
     def test_unknown_tool_and_bad_args_are_error_observations(self):
         llm, inv, ex, _ = mkv2([tool("hack_the_db"), tool("code_search", {"nope": 1}), tool("read_file", {}), fr()])
@@ -295,7 +297,7 @@ class BudgetTests(unittest.TestCase):
     def test_for_loop_defaults(self):
         v1, v2 = config.Budget.for_loop("v1"), config.Budget.for_loop("v2", max_steps=None, max_queries=30)
         self.assertEqual((v1.max_steps, v1.max_queries), (8, 10))
-        self.assertEqual((v2.max_steps, v2.max_queries, v2.max_tool_calls), (18, 30, 30))
+        self.assertEqual((v2.max_steps, v2.max_queries, v2.max_tool_calls), (22, 30, 30))
 
 
 # ----------------------------------------------------------------------------- context
@@ -464,7 +466,7 @@ class PipelineV2Tests(unittest.TestCase):
     def setUp(self):                                                # the real knowledge/cards change with reviews: isolate the tests from them
         import os
         from unittest import mock
-        self._env = mock.patch.dict(os.environ, {"HIBOT_CARDS_DIR": tempfile.mkdtemp()})
+        self._env = mock.patch.dict(os.environ, {"HIBOT_CARDS_DIR": tempfile.mkdtemp(), "HIBOT_V2_PLAN": "0", "HIBOT_V2_CRITIC": "0", "HIBOT_V2_CHECKLIST": "0"})
         self._env.start()
         self.addCleanup(self._env.stop)
 

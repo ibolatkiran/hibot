@@ -1,3 +1,9 @@
+---
+skill: error_message_trace
+keywords: error|exception|hata|unexpected|failed|not authorized|invalid|network error
+required_evidence:
+- id: error_text_search | description: Search the exact error text (and fragments without placeholders) in code / i18n / SP texts to find the throwing condition | satisfied_by: tool:graph_search_error_text ; tool:code_search
+---
 # A quoted error message: trace it to the throwing code
 
 ## Steps

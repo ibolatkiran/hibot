@@ -73,7 +73,7 @@ class Budget:
     def for_loop(cls, loop: str = "v1", **overrides) -> "Budget":
         """Defaults per investigation loop.  v2 is open ended: more steps, queries and ad-hoc SQL, bigger context and observations.
         Overrides with a None value are ignored (CLI flags that were not given)."""
-        base = {} if loop != "v2" else {"max_steps": 18, "max_queries": 25, "max_adhoc_sql": 12, "max_context_chars": 90000,
+        base = {} if loop != "v2" else {"max_steps": 22, "max_queries": 25, "max_adhoc_sql": 12, "max_context_chars": 90000,
                                         "max_obs_chars": 6000, "max_rows": 25}
         base.update({k: v for k, v in overrides.items() if v is not None})
         return cls(**base)

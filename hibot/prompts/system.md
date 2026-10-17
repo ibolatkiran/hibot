@@ -86,8 +86,9 @@ You analyse ONE support ticket and tell a developer exactly where the problem co
     db_errors_recent) around the ticket creation. These logs are platform-wide: a failed job / growing queue / error spike in that window is a
     strong hint, an empty window means "nothing visible in our logs" (then the other system is the likelier place: escalate_other_system).
 14. Confidence is post-processed: it is capped at 0.5 when no query ran, at 0.6 unless an executed query with a non-empty relevant result (or a supported
-    card / a manual-fix finding of the ticket window) directly supports your root cause, and at 0.8 unless a confirmed card is supported or
-    >= 2 independent executed queries support it. Give an honest raw confidence; cite the supporting queries as evidence (ref = query id).
+    card / a manual-fix finding of the ticket window) directly supports your root cause, at 0.69 unless a confirmed card is supported or
+    >= 2 independent executed queries (or read source files you cite) support it, at 0.85 unless a confirmed card or >= 3 independent evidences support it,
+    and at 0.55 for user_error / config on a status ticket whose ticket window shows no status change (unless status_step_check proved the transition missing). Give an honest raw confidence; cite the supporting queries as evidence (ref = query id).
 15. "Cannot edit X / field not editable / button missing / please make X changeable": the endpoint usually works; ask WHO the UI lets use it. "UI GATING" in the case
     file (or in an inspect_code endpoint observation) shows the calling screens' permission conditions (hard-coded user-type / role / tenant id lists, SYSTEM_CONFIG, TODOs).
     Resolve hard-coded user-type ids with `user_type_lookup` (Ids, then the ticket TenantId) and check whether the reporter's role is in the list. Excluded by a code list =

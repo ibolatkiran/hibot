@@ -70,7 +70,7 @@ def analyze(key: Optional[str] = None, text: Optional[str] = None, *, llm: LLMSo
         ex.close()
     if ka and ka.get("match"):
         known_issue.apply_to_report(out["report"], ka, out["report"].get("executed_queries", 0))
-        calibration.apply(out["report"], out["queries"])       # a card may have raised the confidence: caps are re-evaluated
+        calibration.apply(out["report"], out["queries"], inc=inc, code_reads=ex.read_paths)       # a card may have raised the confidence: caps are re-evaluated
     if gate_err:
         out["warnings"].append("round-2 helper failed: " + gate_err)
     if ka and ka.get("error") and not ka.get("match"):

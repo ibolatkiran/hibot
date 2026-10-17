@@ -50,3 +50,19 @@ Run output: `runs/eval_<tag>/results.jsonl` (checkpoint, appended per ticket; gi
 * A run record with an error counts as a miss (never silently dropped).
 
 Caveats: dry-run reports can never resolve WOs, so tenant/WO/footprint metrics are only meaningful with `--live`.
+
+## holdout2.json: second blind hold-out (improvement round 3, written 2026-10-17 BEFORE any tuning)
+`eval_set.json` was contaminated (measured four times, D19/D26), so round 3 froze a NEW set: **40 Sirius EU tickets** (`knowledge/eval/holdout2.json`, split `test`,
+built by `python tools/eval/build_holdout2.py`; the LABELS table inside the script is the curated silver table, axes come from the SAME mechanical rules
+`add_axes.py` + `label_axes_rules.md` R1-R9).
+* Selection: Jira resolution Done, non-APAC country, NOT in `eval_set.json`, NOT mentioned in `knowledge/skills/*.md`, `knowledge/cards/*.json`, `project/*.md`,
+  `CLAUDE.md` or `knowledge/eval/*`. No HiBot output was looked at for these tickets before the final run.
+* Strata: status_footprint 6, status_nochange 5, functional_defect 7, integration_failure 5, master_data_request 6, access_request 4,
+  notification_failure 4, performance_report 3. Label confidence: high 6, medium 32, low 2 (the low ones are `needs_human_review`).
+* Expected axes: master_data/master_data_change 9 (R1), user_error 7 (R3), config/data_fix 5 (R8a), unknown/data_fix 5 (R8c), integration/escalate_other_system 5 (R5a),
+  access 4 (R2), config/config_change 2 (R6), data_issue/data_fix 1 (R8b), integration/unknown 1 (R5b), unknown 1 (R7).
+* Run: `python tools/eval/run_eval.py --tag holdout2_v1 --loop v1 --llm http --live --eval-set knowledge/eval/holdout2.json --delay 2 --resume`, same with `holdout2_v2 --loop v2`;
+  score with `python tools/eval/score.py --tag holdout2_v1 --eval-set knowledge/eval/holdout2.json`. Run each exactly once (no tuning after looking).
+* Tamper check: `python tools/eval/build_holdout2.py --verify`.
+
+holdout2.json sha256: `327c17ee81812565bafbbba18ce085eec760dbb82ed069969c2000461c19d145`

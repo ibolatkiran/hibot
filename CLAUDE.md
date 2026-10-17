@@ -1,6 +1,7 @@
 # HiBot: Sirius Incident Root-Cause Agent
 
 > **Yeni bir agent/oturum olarak buradan başla.** Bu dosya otomatik yüklenir. Devamını sırayla oku:
+> 0. [project/HANDOFF.md](project/HANDOFF.md): **son devir notu, önce bunu oku**
 > 1. [project/PLAN.md](project/PLAN.md): fazlar, şu anki durum, **sıradaki iş**
 > 2. [project/DECISIONS.md](project/DECISIONS.md): alınmış kararlar (tekrar tartışma)
 > 3. [project/FINDINGS.md](project/FINDINGS.md): keşif bulguları (veri, önyüz, backend, DB)

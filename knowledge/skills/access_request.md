@@ -1,3 +1,10 @@
+---
+skill: access_request
+problem_types: access_request
+keywords: \baccess\b|\blogin\b|log in|password|okta|authori[sz]|yetki|\brole\b|new user|account
+required_evidence:
+- id: user_lookup | when: user_code | description: Look the user code up (Catalog.SiriusUser, employee, role, tenant authority) | satisfied_by: template:user_access_lookup ; sql:SiriusUser|EmployeeTenantAuthority
+---
 # Access, role, login, new user
 
 ## Steps
