@@ -70,6 +70,19 @@ Auth: header `X-HiBot-Key: <shared secret>` (HiBot env `HIBOT_SERVICE_KEY`; API 
 - `python -m hibot.service --host 0.0.0.0 --port 8077`; `HIBOT_SERVICE_KEY` required; health endpoint.
 - Tests with FastAPI TestClient and a fake pipeline.
 
+## Local end-to-end run (verified 2026-10-17)
+1. HiBot service: `python -m hibot.service --port 8077` (needs `HIBOT_SERVICE_KEY` in HiBot/.env).
+2. Monitoring DB = shared **preprod** `gfsmpreprod` (Monitoring schema lives in the GFSM DB). Only `AddHiBotAnalyses` was applied, with the user's approval, after listing pending migrations.
+3. API (branch `feature/hibot-module`) with the **safe local-run switches**. Without them a local Hangfire server would process preprod's monitor/notification jobs and re-sync preprod's recurring jobs:
+   `ASPNETCORE_ENVIRONMENT=Development`, `DOTNET_ROLL_FORWARD=Major`, `Monitoring__ConfigurationDatabase__ConnectionString`, `HiBot__ServiceKey`, `Hangfire__ServerQueues__0=hibot`, `Monitoring__Scheduling__SyncOnStartup=false`, `Monitoring__Bootstrap__Enabled=false`; launch profile `https` (https://localhost:7209).
+   Helper used by the coordinator: a local script that reads the secrets from files and passes them only via the child process environment.
+4. UI: `npm start` (development env points at https://localhost:7209/api); log in with Okta at http://localhost:3000 → HiBot.
+
+## Deployment notes (when the module is deployed to preprod/prod)
+- HiBot poll jobs go to the Hangfire queue `hibot`. Deployed servers listen to `["default","hibot"]` by default (unset `Hangfire:ServerQueues`). **While someone runs the API locally against the same DB, set `Hangfire:ServerQueues=["default"]` on the deployed server**, otherwise it may pick up locally created poll jobs it cannot complete.
+- `HiBot:ServiceKey` must come from Key Vault or user secrets, never from `appsettings.json` (the user put it there for the local test; move it before committing).
+- The HiBot service must be reachable from the deployed API (`HiBot:BaseUrl`), and must itself reach the read-only Sirius DB + ArGPT.
+
 ## Open questions for the user
 1. Where will the HiBot service run? It needs read-only PROD Sirius DB + ArGPT reachability. Dev: localhost:8077.
 2. Who may use it? Use a new role `HiBotUser`, or all authenticated monitoring users?
