@@ -99,5 +99,11 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
 45. SM-1808060 (FINDINGS §22): v1 kanıt toplamadan rapor yazdı → asgari kanıt koruması gerekli; skill güncellendi.
 46. v2 agent'ı 12:59'dan beri takılıydı. ArGPT `chat-completion` 429 "Daily usage limit" döndürüyor, `text-completion` çalışıyor. Agent'ın bekleme script'leri durduruldu, agent'ın kendisi de durduruldu.
     - **Yeni Sonnet agent** başlatıldı: kart eksenlerini düzeltme, asgari kanıt koruması (v1+v2), chat→text otomatik geçişi, dev kontrolleri (SM-1808060/2172385/2169006), son test ölçümü `v2_20261017`.
+47. v2 sonucu (FINDINGS §23): isabet ↑, kalibrasyon ↓, sığ araştırma → varsayılan v1 kaldı (D26). Kullanıcı "v2'yi mükemmel yapmak için ne gerekiyorsa yap" dedi. → **Tur 3** (Sonnet):
+    - önce yeni **dondurulmuş hold-out seti** (`holdout2.json`, sha256 ile)
+    - deterministik kalibrasyon
+    - **skill'lerin kontrol listesine dönüştürülmesi** (zorunlu kanıt; orkestratör takip edip eksikse final raporu reddeder)
+    - plan ve eleştirmen geçişleri
+    - dev'de iterasyon, sonra hold-out'ta v1 ve v2 karşılaştırması → varsayılan kararı
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.
