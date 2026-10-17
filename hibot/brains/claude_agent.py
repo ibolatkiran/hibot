@@ -3,7 +3,7 @@
 Experiment for D20/D22: same tools (hibot/tools) and same methods (knowledge/skills) as the coordinator,
 with a real tool-calling model instead of the ArGPT JSON emulation.
 
-    python -m hibot.brains.claude_agent SM-2169006 [--model claude-opus-5-5] [--effort high] [--max-usd 1.0] [--max-steps 30]
+    python -m hibot.brains.claude_agent SM-2169006 [--model claude-sonnet-5-5] [--effort medium] [--max-usd 1.0] [--max-steps 30]
 
 Needs ANTHROPIC_API_KEY (HiBot/.env). Read-only: every DB access goes through hibot.db (safe_sql, audit log).
 Outputs: runs/claude_<timestamp>_<key>/ (transcript.jsonl, report.md, usage.json).
@@ -205,8 +205,10 @@ def main(argv=None) -> int:
     load_env()
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("key")
-    ap.add_argument("--model", default=os.environ.get("HIBOT_CLAUDE_MODEL", "claude-opus-5-5"), choices=sorted(PRICES))
-    ap.add_argument("--effort", default="high", choices=["low", "medium", "high", "xhigh", "max"])
+    # Default: Sonnet 5.5 (user asked for a cheaper model than Opus, 2026-10-17); effort medium is the recommended
+    # starting point for multistep tool use on Sonnet 5.5.
+    ap.add_argument("--model", default=os.environ.get("HIBOT_CLAUDE_MODEL", "claude-sonnet-5-5"), choices=sorted(PRICES))
+    ap.add_argument("--effort", default="medium", choices=["low", "medium", "high", "xhigh", "max"])
     ap.add_argument("--max-usd", type=float, default=1.0, help="stop and force the final report near this spend")
     ap.add_argument("--max-steps", type=int, default=30)
     a = ap.parse_args(argv)
