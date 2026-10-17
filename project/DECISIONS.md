@@ -49,6 +49,7 @@ Koordinatörün yorumudur; `hibot cards` ile geri alınabilir. | Kullanıcı | K
   - JSON modu
   - GPT-5.1 reasoning effort parametresi
   - bağlam, maxTokens ve oran limitleri
+  - **2026-10-17 tespiti:** `chat-completion` bizim ClientId için **günlük kullanım limitine** takıldı (429 "Daily usage limit is exceeded", 12:59'dan itibaren; v2 geliştirme denemeleri). `text-completion` çalışmaya devam etti. → Limitin değeri ve iki endpoint'in ayrı ayrı mı sayıldığı IT'ye sorulacak. Üretim için iki önlem: chat → text otomatik geçişi ve günlük analiz sayısının izlenmesi.
 - Prod DB: EU kullanıcısı hazır (2026-10-16); kimlik doğrulama tipi (SQL login mi, Entra ID mi?) ve APAC kullanıcısı bekleniyor.
 - Ülke → TenantId eşlemesi: `Catalog.Tenant` verisi DB erişimiyle doğrulanacak.
 - T70 2271 → 2260 (*Financed* → *Work in progress*) de bilinçli mi? (D17 sadece → 2257 için verildi.) T68 329 → 314, T80 706 → 707, T81 897 → 888 için iş birimi kararı bekleniyor. T49 818 → 821 ve T46 841 → 1892 için red önerildi, kullanıcı onayı bekleniyor.
