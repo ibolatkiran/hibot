@@ -139,6 +139,8 @@ def score_ticket(item: dict, rec: dict) -> dict:
         "key": item["key"], "stratum": item["stratum"], "split": item["split"], "label_confidence": item.get("label_confidence"),
         "reliable": reliable, "expected": exp, "got": got, "confidence": conf, "error": rec.get("error"),
         "elapsed_s": rec.get("elapsed_s"), "llm_calls": rec.get("llm_calls"),
+        "steps": (rec.get("budget_used") or {}).get("steps"), "tool_calls": rec.get("tool_calls"),
+        "steps": (rec.get("budget_used") or {}).get("steps"), "tool_calls": rec.get("tool_calls"),
         "queries_total": len(rec.get("queries") or []), "queries_executed": sum(1 for q in rec.get("queries") or [] if q.get("executed")),
         "matched_card": rec.get("matched_card"),
     }
@@ -207,6 +209,7 @@ def summarize(rows: List[dict]) -> dict:
         "confidently_wrong_rate_all": _rate(sum(r["confidently_wrong"] for r in rows), n),
         "avg_elapsed_s": _avg(r.get("elapsed_s") for r in rows), "avg_queries_total": _avg(r["queries_total"] for r in rows),
         "avg_queries_executed": _avg(r["queries_executed"] for r in rows), "avg_llm_calls": _avg(r.get("llm_calls") for r in rows),
+        "avg_steps": _avg(r.get("steps") for r in rows), "avg_tool_calls": _avg(r.get("tool_calls") for r in rows),
         "card_match_rate": _rate(sum(1 for r in rows if r.get("matched_card")), n),
     }
 

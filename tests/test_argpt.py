@@ -118,3 +118,48 @@ class ArGptChatTests(unittest.TestCase):
         headers = {k.lower(): v for k, v in rec.requests[0].header_items()}
         self.assertEqual(headers["clientid"], "SECRET-CID")
         self.assertEqual(rec.requests[0].full_url, c.url)
+
+
+class ChatTo429FallbackTests(unittest.TestCase):
+    """argpt_chat -> argpt text-completion on 429 (daily usage limit); the client keeps using text for the rest of the run."""
+    LIMIT = (429, json.dumps({"message": "Daily usage limit is exceeded."}).encode())
+    OK = (200, json.dumps({"content": "{\"a\": 1}", "message": "success"}).encode())
+    MULTI = [{"role": "system", "content": "SYS"}, {"role": "user", "content": "Q1"},
+             {"role": "assistant", "content": "A1"}, {"role": "user", "content": "Q2"}]
+
+    def _client(self, *responses):
+        urls = []
+        seq = list(responses)
+
+        def opener(req, timeout):
+            urls.append((req.full_url, json.loads(req.data.decode())))
+            return seq.pop(0)
+        c = HttpChatClient(URL, fmt="argpt_chat", api_key="SECRET-KEY", client_id="SECRET-CID", opener=opener, sleep=lambda s: None, retries=2)
+        return c, urls
+
+    def test_daily_limit_falls_back_without_retrying_and_sticks(self):
+        c, urls = self._client(self.LIMIT, self.OK, self.OK)
+        self.assertEqual(c.transport, "argpt_chat")
+        self.assertEqual(c.complete(self.MULTI), "{\"a\": 1}")
+        self.assertEqual([u.rsplit("/", 1)[1] for u, _ in urls], ["chat-completion", "text-completion"])
+        self.assertIn("prompt", urls[1][1])                               # flattened multi-turn: one prompt, every turn inside
+        for needle in ("SYS", "Q1", "A1", "Q2"):
+            self.assertIn(needle, urls[1][1]["prompt"])
+        self.assertEqual((c.transport, c.fmt), ("argpt_text_fallback", "argpt_chat"))
+        self.assertIn("Daily usage limit", c.fallback_reason)
+        c.complete(self.MULTI)                                            # the rest of the run stays on text-completion
+        self.assertTrue(urls[2][0].endswith("/text-completion"))
+
+    def test_other_429_is_retried_before_falling_back(self):
+        busy = (429, b'{"message":"slow down"}')
+        c, urls = self._client(busy, busy, busy, self.OK)
+        c.complete(self.MULTI)
+        self.assertEqual(len(urls), 4)
+        self.assertEqual(c.transport, "argpt_text_fallback")
+
+    def test_plain_text_format_has_no_fallback_and_reports_transport(self):
+        c = make(Recorder(429, {"message": "Daily usage limit is exceeded."}))
+        self.assertEqual(c.transport, "argpt")
+        with self.assertRaises(LLMError):
+            c.complete(MESSAGES)
+        self.assertEqual(c.transport, "argpt")

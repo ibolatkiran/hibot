@@ -701,6 +701,44 @@ Kullanıcı DbChangeTracking UI'ından çalıştırdı (servis, v1 döngüsü). 
 - v1 döngüsü, kanıt toplamadan rapor yazmaya izin veriyordu. → v2 agent'ına **asgari kanıt koruması** eklemesi söylendi: hiç araç çağrılmadıysa final rapor bir kez geri çevrilir; istisna, desteklenmiş onaylı kart.
 - Yöntem kitaplığı güncellendi: `notification_failure.md` dosyasına "Send SMS/NPS on status X instead of Y" bölümü ve worked example eklendi. SM-1808060 v2 için set dışı bir dev kontrolü olarak kullanılacak.
 
+## 23. v2 döngüsü (ArGPT GPT-5.1, text-completion üzerinden JSON araç protokolü) ve son test ölçümü, 2026-10-17
+
+Karşılaştırma: `knowledge/eval/compare_v2.md`. Chat endpoint'i günlük limitte olduğu için tüm canlı çalıştırmalar text-completion üzerinden yapıldı. Chat → text otomatik geçişi sadece birim testlerle doğrulandı.
+
+**Düzeltmeler**
+- Geri bildirimle oluşan kartlar artık eksenleri taşıyor; mevcut 3 kart migrate edildi.
+- **Asgari kanıt koruması** (v1 + v2): hiç araç veya sorgu çalışmadan yazılan rapor bir kez geri çevriliyor (`read_skill` sayılmıyor; desteklenmiş onaylı kart istisna).
+- Derinlik kontrolü artık sadece başarılı araç çağrılarını sayıyor.
+- `llm_transport` ve `llm_fallback_reason` alanları kayıtlara yazılıyor.
+- Testler: 551.
+
+**Test seti** (güvenilir etiket n=30)
+
+| Metrik | Baseline | Tur 1 | Tur 2 | v2 |
+|---|---|---|---|---|
+| Emin ama yanlış (eski / rct) | 23 / 17% | 3 / 7% | 3 / 7% | **23 / 17%** ❌ |
+| Kesin / esnek | 40 / 50% | 53 / 53% | 53 / 53% | 50 / 60% |
+| Kök neden türü (rct) | 50% | 57% | 53% | **60%** |
+| Yapılması gereken | 47% | 53% | 63% | 63% |
+| İki eksen | 37% | 47% | 50% | **53%** |
+| 0,7+ güvende isabet | 50% | 86% | 90% | **59%** ❌ |
+| Ortalama araç çağrısı | – | – | – | 2,5 |
+
+**Değerlendirme**
+- v2 isabeti biraz artırdı (iki eksen 53%; ana veri, yetki ve performans gruplarında iyi), ama **kalibrasyon bozuldu**. Pencerede değişiklik olmayan statü ticket'larında 0,7–0,86 güvenle `user_error` / `config` diyor.
+- Ortalama 2,5 araç çağrısıyla **derin araştırma yapmıyor**. Case file'la yetiniyor.
+- Zor vaka SM-1808060 iki çalıştırmada da **yeniden üretilemedi**. İlki skill'deki örnekten cevapladı, ikincisi yanlış mekanizmaya (`FlsNps*`) gitti. Çalıştırmalar arası sapma yüksek.
+- Dev sızıntısı: dev ticket'larının hepsinin skill'lerde worked example'ı var, bu yüzden dev skorları (7/7) şişik.
+- **Karar:** servis varsayılanı **v1 kalır** (+ asgari kanıt koruması). v2 `--loop v2` bayrağıyla kullanılabilir.
+
+**Stratejik sonuç** (FINDINGS §20–23 birlikte)
+- Deterministik case file en büyük katkıyı veriyor.
+- Derin ve açık uçlu araştırmada asıl kaldıraç **native tool calling**:
+  - Claude Haiku zor vakalarda 8–22 araç çağrısıyla koordinatör seviyesine çıktı.
+  - GPT-5.1'in JSON taklidi 2–3 çağrıda kalıyor.
+- → IT'den gelecek cevaplar (D25: ArGPT function calling veya kurumsal Claude) bir sonraki büyük adım.
+- ⚠️ **Test seti kirlendi:** aynı 40 ticket dört kez ölçüldü. Sonraki turlarda yeni bir hold-out seti gerekiyor (veri setinden sonraki yeni ticket'lar).
+
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
 Önyüzün çağırdığı ama backend'de karşılığı olmayan **109 benzersiz çağrı** var, liste: `knowledge/codemap/trace_index.json` → `unmatched_frontend_calls`. Örnekler:

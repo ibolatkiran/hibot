@@ -5,7 +5,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
-from . import code, data, git
+from . import code, data, git, skills
 from ._common import err
 
 S, I, B = {"type": "string"}, {"type": "integer"}, {"type": "boolean"}
@@ -127,6 +127,12 @@ TOOLS: List[Tool] = [
          "Who/when changed a suspicious line.",
          {"repo": _p(S, "repo folder"), "path": _p(S, "repo-relative file"), "start_line": _p(I, "first line"),
           "end_line": _p(I, "last line (default start+39)")}, ["repo", "path", "start_line"]),
+    Tool("read_skill", skills.read_skill,
+         "One investigation method from the skills library (knowledge/skills): a symptom specific recipe naming the tools to use and the order. "
+         "Names: see the skills index in your instructions; an unknown name returns the list.",
+         "Once the symptom is clear (value 0/wrong, cannot do X, status change, missing master data, error message, integration, "
+         "notification, access, ticket footprint), read the matching skill and follow it.",
+         {"name": _p(S, "skill file name without .md, e.g. value_provenance")}, ["name"]),
 ]
 BY_NAME: Dict[str, Tool] = {t.name: t for t in TOOLS}
 
@@ -155,6 +161,11 @@ def validate_args(tool: Tool, args: Any) -> Optional[str]:
             args[k] = [x for x in v.replace(",", " ").split() if x]
         elif t == "boolean" and isinstance(v, str) and v.lower() in ("true", "false"):
             args[k] = v.lower() == "true"
+        elif t == "object" and isinstance(v, str) and v.strip().startswith("{"):      # LLMs sometimes send params as a JSON string
+            try:
+                args[k] = json.loads(v)
+            except ValueError:
+                return "argument %r must be an object (got unparsable JSON text)" % k
         elif not isinstance(v, _TYPES[t]) or (t == "integer" and isinstance(v, bool)):
             return "argument %r must be %s" % (k, t)
         if tool.props[k].get("enum") and str(args[k]).upper() not in tool.props[k]["enum"]:

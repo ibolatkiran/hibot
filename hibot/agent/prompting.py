@@ -14,7 +14,8 @@ def _j(o) -> str:
 
 def build_case_prompt(inc: dict, matches: List[dict], code_ctx: List[dict], catalog_text: str, *, mode: str,
                       region: str, budget: config.Budget, max_chars: int = 30000,
-                      resolved: str = "", baseline: str = "", card_section: str = "", extra: str = "") -> str:
+                      resolved: str = "", baseline: str = "", card_section: str = "", extra: str = "", loop: str = "v1") -> str:
+    v2 = loop == "v2"                              # unified loop: tool names and the closing instruction differ
     L: List[str] = []
     L.append("## TICKET %s (source: %s)" % (inc.get("key") or "free text", inc.get("source")))
     L.append("app=%s country=%s company_code=%s language=%s rule-based problem_type=%s (a guess; may be wrong) status=%s" % (
@@ -45,7 +46,7 @@ def build_case_prompt(inc: dict, matches: List[dict], code_ctx: List[dict], cata
             L.append("- card %s [%s, match %.2f: %s] %s" % (c["id"], c["status"], m["score"], "; ".join(m["reasons"]), c["title"]))
             L.append("  root cause: " + c["root_cause"][:600])
             for q in cardmod.resolve_card_queries(c, inc):
-                L.append("  verify: run_query %s params=%s%s" % (q["query_id"], _j(q["params"]),
+                L.append("  verify: %s %s params=%s%s" % ("run_template" if v2 else "run_query", q["query_id"], _j(q["params"]),
                          " (need values for: %s)" % ", ".join(q["unresolved"]) if q["unresolved"] else ""))
             L.append("  fix: " + " | ".join(c.get("fix_steps") or [])[:500])
             if m["missing_entities"]:
@@ -68,13 +69,19 @@ def build_case_prompt(inc: dict, matches: List[dict], code_ctx: List[dict], cata
         L.append("\n" + card_section)
     if extra:                                      # round 2: UI gating / column provenance (deterministic helpers)
         L.append("\n" + extra)
-    L.append("\n## QUERY TEMPLATE CATALOG (region %s; ! required, ? optional)" % region)
+    L.append("\n## QUERY TEMPLATE CATALOG (region %s; ! required, ? optional%s)" % (
+        region, "; call with the run_template tool: query_id + params" if v2 else ""))
     L.append(catalog_text)
     L.append("\n## RUN SETTINGS")
     L.append("db mode: %s%s" % (mode, "" if mode == "live" else " - queries are validated and rendered but NOT executed; no data comes back"))
-    L.append("default region: %s. Budget: %d investigation steps, %d queries (max %d ad-hoc)." % (
-        region, budget.max_steps, budget.max_queries, budget.max_adhoc_sql))
-    L.append("\nAnswer with your first action as ONE JSON object.")
+    if v2:
+        L.append("default region: %s. Budget: %d steps (turns), %d tool calls, %d queries (max %d ad-hoc sql)." % (
+            region, budget.max_steps, budget.max_tool_calls, budget.max_queries, budget.max_adhoc_sql))
+        L.append('\nStart the investigation. Reply with ONE JSON object: a tool call {"thought","tool","args"} or {"final_report":{...}}.')
+    else:
+        L.append("default region: %s. Budget: %d investigation steps, %d queries (max %d ad-hoc)." % (
+            region, budget.max_steps, budget.max_queries, budget.max_adhoc_sql))
+        L.append("\nAnswer with your first action as ONE JSON object.")
     text = "\n".join(L)
     if len(text) > max_chars:                       # shrink the least valuable parts first: resolved/baseline/catalog are kept whole
         head = "\n".join(L[:pinned_from])

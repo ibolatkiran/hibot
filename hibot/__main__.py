@@ -1,4 +1,4 @@
-"""CLI:  python -m hibot analyze SM-1777386 [--text "..."] [--region EU|APAC] [--live] [--max-steps N] [--llm fake|http]
+"""CLI:  python -m hibot analyze SM-1777386 [--loop v1|v2] [--text "..."] [--region EU|APAC] [--live] [--max-steps N] [--llm fake|http]
         python -m hibot feedback <run_id> --verdict correct|wrong|partial [--note "..."]
         python -m hibot cards list [--status draft|confirmed|rejected] | show <id> | confirm <id> [--note ..] [--root-cause ..]
                               [--fix-step ..]... [--classification ..] [--title ..] | reject <id> --note .. | annotate <id> --note .."""
@@ -27,7 +27,7 @@ def cmd_analyze(a) -> int:
     if not a.key and not a.text and not a.xml:
         print("error: give a Jira key and/or --text", file=sys.stderr)
         return 2
-    budget = config.Budget(max_steps=a.max_steps, max_queries=a.max_queries)
+    budget = config.Budget.for_loop(a.loop, max_steps=a.max_steps, max_queries=a.max_queries)
     try:
         inc = intake.build_incident(a.key, a.text, xml_path=a.xml)
     except intake.IntakeError as e:
@@ -40,9 +40,18 @@ def cmd_analyze(a) -> int:
               "Run without --live for dry-run." % region, file=sys.stderr)
         return 2
     demo = a.llm == "fake"
+    if demo and a.loop == "v2":
+        print("error: the scripted fake demo only speaks the v1 protocol; use --loop v1 or --llm http", file=sys.stderr)
+        return 2
     try:
-        llm = (lambda i, m, r: build_demo_llm(i, m, r)) if demo else client_from_env("http")
-        run = pipeline.analyze(a.key, a.text, llm=llm, mode=mode, region=region, budget=budget, demo=demo, incident=inc)
+        if demo:
+            llm = lambda i, m, r: build_demo_llm(i, m, r)          # noqa: E731
+        elif a.loop == "v2":
+            from hibot.agent.loop_v2 import make_client             # argpt text-completion .env -> argpt_chat (chat roles)
+            llm = make_client()
+        else:
+            llm = client_from_env("http")
+        run = pipeline.analyze(a.key, a.text, llm=llm, mode=mode, region=region, budget=budget, demo=demo, incident=inc, loop=a.loop)
     except LLMError as e:
         print("error: %s" % e, file=sys.stderr)
         return 2
@@ -50,7 +59,8 @@ def cmd_analyze(a) -> int:
     print("Rapor: %s" % (run["run_dir"] + "\\report.md"))
     print("Run: %s | mod: %s | bölge: %s | llm: %s" % (run["run_id"], mode, region, run["llm"]))
     ran = sum(1 for q in run["queries"] if q["executed"])
-    print("Sorgu: %d hazırlandı, %d gerçekten çalıştırıldı" % (len(run["queries"]), ran))
+    print("Sorgu: %d hazırlandı, %d gerçekten çalıştırıldı%s" % (len(run["queries"]), ran,
+          (" | araç çağrısı: %s" % run.get("tool_calls")) if a.loop == "v2" else ""))
     print("Kök neden türü: %s | Yapılması gereken: %s | sınıflandırma (eski): %s | güven: %.2f" % (
         rep.get("root_cause_type"), rep.get("resolution_action"), rep["classification"], rep["confidence"]))
     print("Özet: %s" % rep["summary"])
@@ -106,8 +116,10 @@ def main(argv=None) -> int:
                                   "(default: docs/jira_export/inbox/<KEY>.xml when the key is unknown)")
     an.add_argument("--region", choices=["EU", "APAC"], help="database region (default: guessed from the country)")
     an.add_argument("--live", action="store_true", help="really run queries (needs HIBOT_DB_<REGION>); default is dry-run")
-    an.add_argument("--max-steps", type=int, default=config.Budget.max_steps)
-    an.add_argument("--max-queries", type=int, default=config.Budget.max_queries)
+    an.add_argument("--loop", choices=["v1", "v2"], default="v1",
+                    help="v1 = one JSON action per turn (default until v2 is measured); v2 = unified chat loop with the generic tools + skills")
+    an.add_argument("--max-steps", type=int, default=None, help="LLM turns (default: v1 %d, v2 %d)" % (config.Budget.max_steps, config.Budget.for_loop("v2").max_steps))
+    an.add_argument("--max-queries", type=int, default=None, help="default: v1 %d, v2 %d" % (config.Budget.max_queries, config.Budget.for_loop("v2").max_queries))
     an.add_argument("--llm", choices=["fake", "http"], default="http", help="fake = scripted demo, http = HIBOT_LLM_* endpoint")
     an.set_defaults(fn=cmd_analyze)
     fb = sub.add_parser("feedback", help="one-click developer feedback on a run")

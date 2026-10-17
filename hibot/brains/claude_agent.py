@@ -57,6 +57,8 @@ the concrete records; compare with a working sibling; try to falsify your best h
 ## Skills index
 {skills_index}
 
+{classification}
+
 ## Final answer
 When you are done (or told the budget is used up), reply WITHOUT calling tools, in Turkish, as Markdown with exactly these \
 sections:
@@ -74,33 +76,34 @@ sections:
 
 
 def _skills_index() -> str:
-    readme = (SKILLS_DIR / "README.md").read_text(encoding="utf-8")
-    return readme.split("## Always start with", 1)[-1].strip()
+    from hibot.tools import skills
+    return skills.skills_index()
 
 
-def _skill_names() -> List[str]:
-    return sorted(p.stem for p in SKILLS_DIR.glob("*.md") if p.stem != "README")
+def build_system() -> str:
+    """System prompt: role, environment, investigation protocol, skills index and the SHARED classification rules + known-card rule
+    (hibot/prompts/classification.md, the same text the ArGPT v2 loop uses)."""
+    from hibot import prompts
+    from hibot.tools import skills
+    return SYSTEM_TEMPLATE.format(protocol=skills.protocol_text(), skills_index=skills.skills_index(),
+                                  classification=prompts.classification_rules())
 
 
 def build_tools() -> List[dict]:
+    """Native tool definitions = the whole registry (read_skill included); read_skill gets an enum of the skill names."""
+    from hibot.tools import skills
     from hibot.tools.registry import TOOLS
-    tools = [{"name": t.name, "description": "%s\nWhen: %s" % (t.description, t.when), "input_schema": t.schema}
-             for t in TOOLS]
-    tools.append({
-        "name": "read_skill",
-        "description": "Read one investigation method from the skills library (knowledge/skills). Use it once the symptom is clear.",
-        "input_schema": {"type": "object", "additionalProperties": False, "required": ["name"],
-                         "properties": {"name": {"type": "string", "enum": _skill_names()}}},
-    })
+    tools = []
+    for t in TOOLS:
+        schema = t.schema
+        if t.name == "read_skill":
+            schema = json.loads(json.dumps(schema))
+            schema["properties"]["name"]["enum"] = skills.skill_names()
+        tools.append({"name": t.name, "description": "%s\nWhen: %s" % (t.description, t.when), "input_schema": schema})
     return tools  # deterministic order -> stable prompt-cache prefix
 
 
 def run_tool(name: str, args: Dict[str, Any]) -> tuple:
-    if name == "read_skill":
-        n = args.get("name")
-        if n not in _skill_names():
-            return "unknown skill %r; available: %s" % (n, ", ".join(_skill_names())), True
-        return (SKILLS_DIR / ("%s.md" % n)).read_text(encoding="utf-8"), False
     from hibot.tools.registry import call_tool
     try:
         res = call_tool(name, args)
@@ -108,7 +111,7 @@ def run_tool(name: str, args: Dict[str, Any]) -> tuple:
         return "%s: %s" % (type(e).__name__, str(e)[:500]), True
     text = json.dumps(res, ensure_ascii=False, default=str)
     if len(text) > TOOL_RESULT_MAX_CHARS:
-        text = text[:TOOL_RESULT_MAX_CHARS] + ' …[truncated: narrow the query/window]"'
+        text = text[:TOOL_RESULT_MAX_CHARS] + ' ...[truncated: narrow the query/window]'
     return text, isinstance(res, dict) and res.get("ok") is False
 
 
@@ -147,8 +150,7 @@ def investigate(key: str, model: str, effort: str, max_usd: float, max_steps: in
     # Organisation-level keys must name the workspace on every request (400 "not scoped to a workspace" otherwise).
     ws = os.environ.get("ANTHROPIC_WORKSPACE_ID")
     client = anthropic.Anthropic(default_headers={"anthropic-workspace-id": ws} if ws else None)
-    protocol = (SKILLS_DIR / "investigation_protocol.md").read_text(encoding="utf-8")
-    system = SYSTEM_TEMPLATE.format(protocol=protocol, skills_index=_skills_index())
+    system = build_system()
     tools = build_tools()
     messages: List[dict] = [{"role": "user", "content": incident_message(key)}]
 

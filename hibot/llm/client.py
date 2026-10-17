@@ -276,6 +276,11 @@ class HttpChatClient(LLMClient):
             if not (self._client_id and self._key):
                 raise LLMError("argpt format needs HIBOT_LLM_CLIENT_ID and HIBOT_LLM_API_KEY")
             self._extra["ClientId"] = self._client_id
+        # transport = what really carries the requests: the configured format, or "argpt_text_fallback" after a chat 429
+        self.transport = fmt
+        self.fallback_reason: Optional[str] = None
+        self._text_url = (self.url[: -len("chat-completion")] + "text-completion") if (
+            fmt == "argpt_chat" and self.url.endswith("/chat-completion")) else None
         self._opener = opener or _default_opener
         self._sleep = sleep
         self._env = dict(os.environ if env is None else env)
@@ -310,6 +315,15 @@ class HttpChatClient(LLMClient):
                 s = s.replace(secret, "***")
         return s[:300]
 
+    def _fall_back_to_text(self, why: str) -> bool:
+        """ArGPT chat-completion is rate limited (e.g. "Daily usage limit is exceeded") while text-completion still works:
+        switch this client to the flattened text-completion format for the rest of its life.  False when not applicable."""
+        if self.fmt != "argpt_chat" or not self._text_url or self.transport != "argpt_chat":
+            return False
+        self._flat, self._parse = _FORMATS["argpt"][0], _FORMATS["argpt"][1]
+        self.url, self.transport, self.fallback_reason = self._text_url, "argpt_text_fallback", why[:160]
+        return True
+
     def complete(self, messages, *, json_schema=None, max_tokens=2000, temperature=0.0) -> str:
         body = self._flat(messages, self.model, max_tokens, temperature, json_schema, self._env)
         payload = json.dumps(body, ensure_ascii=False).encode("utf-8")
@@ -329,6 +343,9 @@ class HttpChatClient(LLMClient):
                         data = text                # plain-text gateway
                     return self._parse(data)
                 last = "HTTP %s: %s" % (status, self._scrub(raw.decode("utf-8", "replace")))
+                if status == 429 and self.fmt == "argpt_chat" and self.transport == "argpt_chat" and (
+                        "daily" in last.lower() or attempt >= self.retries) and self._fall_back_to_text(last):
+                    return self.complete(messages, json_schema=json_schema, max_tokens=max_tokens, temperature=temperature)
                 if status not in (408, 425, 429) and not (500 <= status < 600):
                     raise LLMError(last)           # other 4xx: retrying will not help
             if attempt < self.retries:

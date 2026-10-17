@@ -2,6 +2,8 @@
 
 Written methods for investigating Sirius incidents. Each skill is a recipe the coordinator (Claude Opus) used to find root causes HiBot missed, written so that **any** investigator (HiBot's GPT-4o loop, or a developer using Claude Code with the HiBot MCP tools) can follow the same path.
 
+Every brain reads a skill with the registry tool `read_skill(name)` (HiBot v2 loop, Claude native tool calling, MCP / Claude Code); the file name without `.md` is the name.
+
 Rules for this library:
 - A skill describes **how to investigate**, not a specific answer. Specific answers belong in cards (`knowledge/cards/`).
 - Every step names the tool to use (see the HiBot tool layer `hibot/tools`, MCP server `python -m hibot.mcp_server`).

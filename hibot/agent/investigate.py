@@ -36,6 +36,8 @@ class Investigation:
         self.warnings: List[str] = []
         self.early_stop_used = False
         self.source_guard_used = False
+        self.evidence_guard_used = False
+        self.card_decides = bool(card_text) and "DESTEKL" in card_text.upper() and "[confirmed" in card_text
         for c in code_ctx or []:                                   # sources the automatic code context already points at
             executor._note_sources(c.get("result") if isinstance(c, dict) else None)
         catalog = executor.registry.catalog_text(executor.region)
@@ -97,11 +99,15 @@ class Investigation:
                     if self._source_unread(act, n):                # one refusal carries both hints (a second refusal would waste a step)
                         self.source_guard_used = True
                         text += "\n\n" + self._source_guard_text()
-                    self._log_step(n, act, text, False)
+                    self._log_step(n, act, self._with_evidence_hint(text, n), False)
                     continue
                 if act["action"] == "final_report" and self._source_unread(act, n):
                     self.source_guard_used = True                  # once per run
-                    self._log_step(n, act, self._source_guard_text(), False)
+                    self._log_step(n, act, self._with_evidence_hint(self._source_guard_text(), n), False)
+                    continue
+                if act["action"] == "final_report" and self._no_evidence(n):
+                    self.evidence_guard_used = True                # once per run
+                    self._log_step(n, act, self._evidence_guard_text(), False)
                     continue
                 if act["action"] == "final_report":
                     report = actions.split_report(act)
@@ -139,6 +145,40 @@ class Investigation:
         except (TypeError, ValueError):
             conf = 0.0
         return axes.normalize(dict(act)).get("classification") == "unknown" or conf < 0.4
+
+    # ------------------------------------------------------- minimum-evidence guard
+    def _evidence_count(self) -> int:
+        """Evidence-gathering done so far: queries that really ran (dry-run: prepared ones) plus, in v2, tool calls other than read_skill."""
+        ex = self.executor
+        n = sum(1 for q in ex.queries if q.get("executed") or ex.mode != "live")
+        return n + int(getattr(self, "beyond_case_calls", 0) or 0)
+
+    def _no_evidence(self, n: int) -> bool:
+        """A final_report with zero evidence gathered (no query, no code/graph/ticket tool) is refused once, unless a confirmed
+        known-issue card matched and its verification supported it (FINDINGS section 22: SM-1808060 got a first-turn report with 0 queries)."""
+        if self.evidence_guard_used or n >= self.budget.max_steps or self.card_decides:
+            return False
+        return self._evidence_count() == 0
+
+    def _with_evidence_hint(self, text: str, n: int) -> str:
+        """Another guard refuses this final_report anyway: carry the minimum-evidence hint in the same refusal (no extra step)."""
+        if self._no_evidence(n):
+            self.evidence_guard_used = True
+            return text + chr(10) * 2 + self._evidence_guard_text()
+        return text
+
+    def _evidence_guard_text(self) -> str:
+        ents = self.inc.get("entities") or {}
+        wo = (ents.get("work_order_ids_strong") or ents.get("work_order_ids") or ents.get("work_case_ids") or [])[:1]
+        tips = []
+        if wo:
+            tips.append("wo_locate / wo_header for work order %s (then wo_status_timeline, wo_field_changes)" % wo[0])
+        tips.append("search the code / graph for the screen, field or error text named in the ticket and read the relevant source")
+        tips.append("look at similar tickets or the ticket window of the affected record")
+        tips.append("sql / run_template to check the actual data behind the claim")
+        return ("NO EVIDENCE GATHERED (refused once): your final_report comes before any query or code/graph tool was executed in this investigation, "
+                "so nothing in it is backed by an observation. Before concluding, gather evidence: " + "; ".join(tips) +
+                ". Send final_report after at least one real observation.")
 
     UNDECIDED_RE = re.compile(r"belirlen(?:e)?(?:mi|em)|tespit edilem|kod mu|konfig\w* mu|code or config|cannot (?:tell|determine|decide)|"
                               r"unclear whether|not possible to (?:tell|determine)|ayırt edilem|ayirt edilem|netleştirilem|netlestirilem", re.I)

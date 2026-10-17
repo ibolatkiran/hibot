@@ -41,6 +41,7 @@ Karar: adaptöre `argpt_chat` formatı eklendi (aynı `.env` ile çalışır, UR
 Koordinatörün yorumudur; `hibot cards` ile geri alınabilir. | Kullanıcı | Kullanıcı |
 | D24 | 2026-10-17 | **Teslim kanalı:** HiBot, **DbChangeTrackingSystemAPI + DbChangeTrackingSystemUI** içinde yeni bir modül olarak sunulacak (analiz isteği, rapor görüntüleme, tek tık geri bildirim, geçmiş analizler, kartlar). | Kullanıcı | Kullanıcı |
 | D25 | 2026-10-17 | IT soruları (function calling, embeddings formatı, kurumsal Claude erişimi): kullanıcıya göre **hepsi mümkün**; ayrıntılar hafta sonundan sonra gelecek. | Kullanıcı | Kullanıcı |
+| D26 | 2026-10-17 | Servis varsayılan döngüsü **v1 + asgari kanıt koruması**. v2 (`--loop v2`) kalibrasyonu düzelene kadar varsayılan olmaz. 40'lık test seti dört kez kullanıldığı için **kirlendi**; sonraki ölçümler yeni bir hold-out setiyle yapılacak (veri setinden sonra açılmış ticket'lar, Jira XML/inbox). | FINDINGS §23 | Koordinatör |
 
 ## Açık sorular
 - ArGPT: model GPT-5.1 PTU (kullanıcı, 2026-10-17; önce GPT-4o denmişti). **IT'ye sorulacak:**

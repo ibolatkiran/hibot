@@ -30,7 +30,7 @@ def load(tag: str) -> dict:
 
 
 def row(label: str, key: str, rs: List[dict], fmt: Callable = pct) -> str:
-    return "| %s | %s |" % (label, " | ".join(fmt(r["overall"][key]) for r in rs))
+    return "| %s | %s |" % (label, " | ".join(fmt(r["overall"].get(key)) for r in rs))
 
 
 def render(rs: List[dict], names: List[str], title: str) -> str:
@@ -57,7 +57,9 @@ def render(rs: List[dict], names: List[str], title: str) -> str:
          row("avg elapsed s", "avg_elapsed_s", rs, num),
          row("avg queries prepared", "avg_queries_total", rs, num),
          row("avg queries executed", "avg_queries_executed", rs, num),
-         row("avg LLM calls", "avg_llm_calls", rs, num), "",
+         row("avg LLM calls", "avg_llm_calls", rs, num),
+         row("avg steps (LLM turns)", "avg_steps", rs, num),
+         row("avg tool calls (v2 only)", "avg_tool_calls", rs, num), "",
          "## Calibration (reliable labels): accuracy (n) per confidence bucket", "",
          "| bucket | %s | %s |" % (" | ".join("legacy: " + x for x in names), " | ".join("root_cause_type: " + x for x in names)),
          "|---|%s|" % "|".join(["---"] * (2 * n))]
@@ -94,16 +96,57 @@ def render(rs: List[dict], names: List[str], title: str) -> str:
     return "\n".join(L) + "\n"
 
 
+def subset_section(rs: List[dict], names: List[str], claude_path: Path, claude_name: str = "Claude Haiku") -> str:
+    """Same-tickets comparison: the keys of a Claude eval (results.jsonl) scored for every column and for the Claude records themselves."""
+    sys.path.insert(0, str(ROOT / "tools" / "eval"))
+    import score
+    recs = score.load_records(claude_path)
+    keys = sorted(recs)
+    items = score.load_eval_set()
+    cl = score.score_all([i for i in items if i["key"] in recs], recs, "all")["tickets"]
+    cols = [(claude_name, cl)] + [(n, [t for t in r["tickets"] if t["key"] in keys]) for n, r in zip(names, rs)]
+    sums = [(n, score.summarize(rows)) for n, rows in cols]
+    L = ["", "## Same tickets as the %s run (%d tickets: %s)" % (claude_name, len(keys), ", ".join(keys)), "",
+         "| metric | %s |" % " | ".join(n for n, _ in sums), "|---|%s|" % "|".join(["---"] * len(sums))]
+
+    def line(label, fn):
+        L.append("| %s | %s |" % (label, " | ".join(fn(rows, sm) for (_, rows), (_, sm) in zip(cols, sums))))
+    line("root_cause_type correct (all labels)", lambda rows, sm: "%d/%d" % (sum(r["rct_ok"] for r in rows), len(rows)))
+    line("both axes correct", lambda rows, sm: "%d/%d" % (sum(r["both_ok"] for r in rows), len(rows)))
+    line("legacy label exact", lambda rows, sm: "%d/%d" % (sum(r["exact"] for r in rows), len(rows)))
+    line("confidently wrong (conf >= 0.7), legacy / root_cause_type", lambda rows, sm: "%d / %d" % (sum(r["confidently_wrong"] for r in rows), sum(r["cw_rct"] for r in rows)))
+    line("honest unknown", lambda rows, sm: "%d/%d" % (sum(r["honest_unknown"] for r in rows), len(rows)))
+    line("avg elapsed s", lambda rows, sm: num(sm["avg_elapsed_s"]))
+    line("avg LLM calls", lambda rows, sm: num(sm["avg_llm_calls"]))
+    line("avg tool calls (v2 only)", lambda rows, sm: num(sm.get("avg_tool_calls")))
+    L += ["", "| key | expected rct | %s |" % " | ".join(n for n, _ in cols), "|---|---|%s|" % "|".join(["---"] * len(cols))]
+    by = [{t["key"]: t for t in rows} for _, rows in cols]
+    for k in keys:
+        base = next((b[k] for b in by if k in b), None)
+        cells = []
+        for b in by:
+            x = b.get(k)
+            cells.append("-" if not x else "%s %.2f%s%s" % (x["got_rct"], x["confidence"], " ok" if x["rct_ok"] else "", " **CW**" if x["cw_rct"] else ""))
+        L.append("| %s | %s | %s |" % (k, base["expected_rct"] if base else "?", " | ".join(cells)))
+    return chr(10).join(L) + chr(10)
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--tags", nargs="+", required=True)
     ap.add_argument("--names", nargs="+", required=True)
     ap.add_argument("--title", default="HiBot baseline vs round 1 vs round 2")
     ap.add_argument("--out", default=str(EVAL_DIR / "compare_round1_vs_round2.md"))
+    ap.add_argument("--subset-results", help="results.jsonl of another brain (e.g. runs/eval_claude_haiku_20/results.jsonl): adds a same-tickets section")
+    ap.add_argument("--subset-name", default="Claude Haiku")
     a = ap.parse_args(argv)
     if len(a.tags) != len(a.names):
         ap.error("--tags and --names need the same length")
-    Path(a.out).write_text(render([load(t) for t in a.tags], a.names, a.title), encoding="utf-8")
+    rs = [load(t) for t in a.tags]
+    text = render(rs, a.names, a.title)
+    if a.subset_results:
+        text += subset_section(rs, a.names, Path(a.subset_results), a.subset_name)
+    Path(a.out).write_text(text, encoding="utf-8")
     print("wrote", a.out)
     return 0
 

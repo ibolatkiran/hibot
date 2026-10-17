@@ -203,3 +203,33 @@ executed queries, so it also works when the LLM ran the queries itself.
 * `runs/`, `knowledge/cards/*.json`, `knowledge/feedback/` need `.gitignore` decisions (`knowledge/**/*.json` is ignored: add
   `!knowledge/cards/*.json` to track cards; add `runs/`).
 * Evaluation set (30-50 historical cases), implicit feedback signals, Jira write-back (phase 3/4).
+
+## Unified loop "v2" (`loop_v2.py`, `python -m hibot analyze <KEY> --loop v2`)
+Default stays v1 until v2 is measured (`knowledge/eval/compare_v2.md`). v2 = the deterministic case file above + an open-ended multi-turn chat with
+the 19 generic tools (`hibot/tools`, incl. `read_skill`) driven by ArGPT **chat-completion** (`HIBOT_LLM_FORMAT=argpt` in `.env` is upgraded to
+`argpt_chat` for v2; any other explicit format is respected; `HIBOT_LLM_FORMAT_V2` overrides; `loop_v2.v2_format`).
+```
+preflight / playbooks / known-issue card / ticket window / UI gating / provenance  (pipeline.py, unchanged)  ──► CASE FILE = first user message
+system message = role + environment + investigation protocol + skills index + tool catalog + classification rules + output protocol (prompts/v2_system.md)
+assistant JSON:  {"thought","tool","args"}  |  {"thought","tools":[<=3 independent calls]}  |  {"final_report":{...existing schema...}}
+user message  :  OBSERVATION (step n) RESULT i/k <tool> <args> <compact result, truncated with a marker> + budget status line
+```
+* **Protocol / repair:** `parse_turn` + `jsonio.complete_json` (fences, prose, trailing commas, 2 repair retries that do not consume steps). The final report is
+  normalised (clipped strings, evidence type aliases, `fix_steps` as string) before schema validation; flat v1-style reports are accepted too. Unknown tool or bad
+  arguments are ERROR observations (with the tool list / usage), count as a tool call; an identical repeated call is a DUPLICATE observation and costs no budget.
+* **DB access:** `run_template` and `sql` are routed through the same `Executor` as v1 (hibot.db templates / safe_sql / masking / audit), so they are budgeted,
+  dry-run safe, appear in `queries.json` in the scorer's shape and feed calibration and the Turkish report. Other tools go through `registry.call_tool`
+  (`read_file` marks a source as read, `graph_*` results feed the source guard, `graph_trace_endpoint` appends the UI-gating text of the callers).
+* **Budgets** (`Budget.for_loop("v2")`): 18 steps (LLM turns), 30 tool calls, 25 queries (12 ad-hoc), context 90 000 chars, one tool observation 6 000 chars
+  (SQL: 25 rows). Exhausted -> ONE forced `final_report` turn (merged into the last user message); invalid -> fallback report.
+* **Context control:** system + case file + all assistant turns (the model's notebook: "write the key facts in every thought") are never trimmed. Over budget the OLDER
+  observations are shortened progressively (1500 -> 600 -> 250 -> 100 -> omitted), the newest 2 turns stay whole. The run record keeps the full texts.
+* **Guards, each at most once:** early stop (unknown / confidence < 0.4 with queries left), shallow status (status ticket, no status query ran), source not read
+  (unknown while a known SP / screen was never opened; v1 logic reused through subclassing), and the v2-only **self-check** (final report after < 2 real investigation
+  calls, `read_skill` does not count, unless a confirmed supported card decides: asks for mechanism read / falsification / how the field is set today).
+* **After the loop:** unchanged: grounding against executed queries, deterministic calibration, axes normalisation, known-issue card application and evidence linking,
+  ticket-window evidence, Turkish report, `report.json` with `preflight`, `ticket_window_changes`, `loop`, `tool_calls`. `steps.jsonl` has one line per turn with its `calls`.
+* **Shared rules:** `hibot/prompts/classification.md` (two-axis definitions, decision rules, snapshot caveat, known-card rule) is used by v2 and by
+  `hibot/brains/claude_agent.py` (`build_system()`).
+* `python tools/eval/run_eval.py --tag T --loop v2 --llm http --live ...`: LLM outages (HTTP 429 daily limit / 5xx) are recorded as errors (not as answers), so `--resume`
+  redoes them, and the batch aborts after 3 such tickets in a row.

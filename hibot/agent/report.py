@@ -54,6 +54,9 @@ def render_markdown(run: Dict[str, Any]) -> str:
     L.append("")
     L.append("- Run: `%s`" % run.get("run_id"))
     L.append("- Mod: `%s` | Bölge: `%s` | LLM: `%s` | Oluşturma: %s" % (run.get("mode"), run.get("region"), run.get("llm"), run.get("created")))
+    if run.get("llm_transport"):
+        L.append("- LLM taşıması: `%s`%s" % (run["llm_transport"], " (chat limiti doldu, text-completion'a geçildi: %s)" % run["llm_fallback_reason"]
+                                          if run.get("llm_fallback_reason") else ""))
     executed = sum(1 for q in queries if q.get("executed"))
     L.append("- Sorgular: %d hazırlandı, **%d gerçekten çalıştırıldı**" % (len(queries), executed))
     if rep.get("fallback"):

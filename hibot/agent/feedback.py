@@ -14,7 +14,8 @@ import json
 from pathlib import Path
 from typing import List, Optional
 
-from . import cards as cardmod
+from . import axes, cards as cardmod
+from .actions import CLASSIFICATIONS
 from . import config, store
 
 VERDICTS = ("correct", "wrong", "partial")
@@ -50,9 +51,22 @@ def build_card(suggested: dict, run: dict, status: str, known_ids: Optional[set]
         "confidence": round(min(float(rep.get("confidence", 0.5)), 0.9), 2), "status": status,
         "evidence_tickets": ev, "created_by": "hibot (run %s) + developer feedback" % run["run_id"],
         "created_at": cardmod.now(),
-        "history": [{"ts": cardmod.now(), "event": "created" if status == "draft" else "confirmed", "run_id": run["run_id"],
+        "history": [{"ts": cardmod.now(), "event": "created", "who": "hibot", "run_id": run["run_id"],
                      "note": "created from suggested_card of the analysis"}],
     }
+    if status == "confirmed":                     # the developer's 'correct' verdict is a user review (same shape as `hibot cards confirm`)
+        card["history"].append({"ts": cardmod.now(), "event": "confirmed", "who": "user", "run_id": run["run_id"],
+                                "note": "one-click feedback verdict: correct"})
+    # the card carries the run's axes (and legacy classification) so known-issue matching can score it
+    rct = suggested.get("root_cause_type") or rep.get("root_cause_type")
+    ra = suggested.get("resolution_action") or rep.get("resolution_action")
+    cls = suggested.get("classification") or rep.get("classification")
+    if cls in CLASSIFICATIONS:
+        card["classification"] = cls
+    if rct in axes.ROOT_CAUSE_TYPES:
+        card["root_cause_type"] = rct
+    if ra in axes.RESOLUTION_ACTIONS:
+        card["resolution_action"] = ra
     return card
 
 
@@ -91,6 +105,7 @@ def record_feedback(run_id: str, verdict: str, note: str = "", *, runs_base: Opt
                 card["status"] = "confirmed"
             card["confidence"] = round(min(0.95, float(card.get("confidence", 0.5)) + 0.1), 2)
             _touch(card, "confirmed", run, note)
+            card["history"][-1]["who"] = "user"                      # a developer verdict is a user review
         elif verdict == "wrong":
             card["confidence"] = round(max(0.05, float(card.get("confidence", 0.5)) - 0.15), 2)
             _touch(card, "contradicted", run, note)
@@ -111,6 +126,8 @@ def record_feedback(run_id: str, verdict: str, note: str = "", *, runs_base: Opt
                         old["evidence_tickets"].append(t)
                 if verdict == "correct" and old["status"] == "draft":
                     old["status"] = "confirmed"
+                    old.setdefault("history", []).append({"ts": cardmod.now(), "event": "confirmed", "who": "user",
+                                                          "run_id": run["run_id"], "note": "one-click feedback verdict: correct"})
                 _touch(old, "evidence_added", run, note)
                 cardmod.save_card(old, cards_dir)
                 actions.append("existing card %s: evidence added (%s)" % (card["id"], old["status"]))

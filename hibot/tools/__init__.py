@@ -8,6 +8,7 @@ from .data import (cards_list, cards_match, column_writers, graph_search_error_t
                    graph_trace_db_object, graph_trace_endpoint, graph_trace_screen, list_templates, run_template,
                    set_runner_factory, similar_tickets, sql, ticket, ticket_window)
 from .git import git_blame, git_log
+from .skills import read_skill
 from .registry import BY_NAME, TOOLS, call_tool, tool_catalog, validate_args
 
 __all__ = [t.name for t in TOOLS] + ["call_tool", "tool_catalog", "TOOLS", "BY_NAME", "validate_args", "set_runner_factory"]

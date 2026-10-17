@@ -66,3 +66,14 @@ class Budget:
     max_cell_chars: int = 160
     max_source_lines: int = 120
     max_llm_retries: int = 2          # JSON repair retries per LLM call
+    max_tool_calls: int = 30          # v2 loop: tool calls the model may make (any tool; failed/duplicate calls included)
+    max_tool_obs_chars: int = 6000    # v2 loop: one tool observation
+
+    @classmethod
+    def for_loop(cls, loop: str = "v1", **overrides) -> "Budget":
+        """Defaults per investigation loop.  v2 is open ended: more steps, queries and ad-hoc SQL, bigger context and observations.
+        Overrides with a None value are ignored (CLI flags that were not given)."""
+        base = {} if loop != "v2" else {"max_steps": 18, "max_queries": 25, "max_adhoc_sql": 12, "max_context_chars": 90000,
+                                        "max_obs_chars": 6000, "max_rows": 25}
+        base.update({k: v for k, v in overrides.items() if v is not None})
+        return cls(**base)

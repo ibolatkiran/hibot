@@ -58,7 +58,7 @@ def summarize_run(run: dict, elapsed: float, item: dict) -> dict:
     budget = run.get("budget") or {}
     return {
         "key": item["key"], "split": item["split"], "stratum": item["stratum"], "error": None,
-        "run_id": run.get("run_id"), "mode": run.get("mode"), "region": run.get("region"), "llm": run.get("llm"),
+        "run_id": run.get("run_id"), "loop": run.get("loop", "v1"), "llm_transport": run.get("llm_transport"), "tool_calls": run.get("tool_calls"), "mode": run.get("mode"), "region": run.get("region"), "llm": run.get("llm"),
         "elapsed_s": round(elapsed, 2), "llm_calls": run.get("llm_calls"), "forced_final": run.get("forced_final"),
         "queries": qs,
         "budget_used": {"steps": len(run.get("steps") or []), "max_steps": budget.get("max_steps"),
@@ -66,6 +66,12 @@ def summarize_run(run: dict, elapsed: float, item: dict) -> dict:
         "matched_card": card, "preflight": run.get("preflight"), "baseline": run.get("baseline"),
         "warnings": run.get("warnings"), "report": run.get("report"),
     }
+
+
+def transport_failure(run: dict) -> Optional[str]:
+    """A run whose LLM calls failed (HTTP 429 daily limit, 5xx, network) ends in a fallback report; that is an outage, not an answer."""
+    ws = [w for w in run.get("warnings") or [] if "LLM transport error" in str(w)]
+    return ("LLM transport: " + str(ws[0])[:200]) if ws and (run.get("report") or {}).get("fallback") else None
 
 
 def run_one(item: dict, args, budget):
@@ -77,9 +83,18 @@ def run_one(item: dict, args, budget):
     region = (args.region or item.get("region") or "EU").upper()
     inc = intake.build_incident(item["key"], None)
     demo = args.llm == "fake"
-    llm = (lambda i, m, r: build_demo_llm(i, m, r)) if demo else client_from_env("http")
+    loop = getattr(args, "loop", "v1")
+    if demo and loop == "v2":
+        raise SystemExit("error: the scripted fake demo only speaks the v1 protocol")
+    if demo:
+        llm = lambda i, m, r: build_demo_llm(i, m, r)               # noqa: E731
+    elif loop == "v2":
+        from hibot.agent.loop_v2 import make_client                 # argpt text-completion .env -> argpt_chat
+        llm = make_client()
+    else:
+        llm = client_from_env("http")
     return pipeline.analyze(item["key"], None, llm=llm, mode=LIVE if args.live else DRY, region=region, budget=budget,
-                            demo=demo, incident=inc, runs_base=args.runs_base)
+                            demo=demo, incident=inc, runs_base=args.runs_base, loop=loop)
 
 
 def main(argv=None) -> int:
@@ -93,6 +108,7 @@ def main(argv=None) -> int:
     ap.add_argument("--region", choices=["EU", "APAC"], help="override the region of every ticket (default: per ticket, EU)")
     ap.add_argument("--resume", action="store_true", help="skip tickets that already have an error-free record")
     ap.add_argument("--delay", type=float, default=2.0, help="seconds to wait between tickets (not after the last)")
+    ap.add_argument("--loop", choices=["v1", "v2"], default="v1", help="investigation loop: v1 (JSON action per turn) or v2 (unified chat loop)")
     ap.add_argument("--max-steps", type=int)
     ap.add_argument("--max-queries", type=int)
     ap.add_argument("--eval-set", default=str(EVAL_SET))
@@ -122,17 +138,25 @@ def main(argv=None) -> int:
                 print("error: --live needs HIBOT_DB_%s (not set)" % reg, file=sys.stderr)
                 return 2
     kw = {k: v for k, v in (("max_steps", a.max_steps), ("max_queries", a.max_queries)) if v}
+    if a.loop == "v2" and a.llm == "fake":
+        print("error: --loop v2 needs --llm http", file=sys.stderr)
+        return 2
     skip = done_keys(results) if a.resume else set()
     todo = [i for i in sel if i["key"] not in skip]
-    print("eval %s: %d tickets selected, %d to run (%d resumed) | llm=%s mode=%s" % (
-        a.tag, len(sel), len(todo), len(sel) - len(todo), a.llm, "live" if a.live else "dry-run"))
-    n_err = 0
+    print("eval %s: %d tickets selected, %d to run (%d resumed) | llm=%s loop=%s mode=%s" % (
+        a.tag, len(sel), len(todo), len(sel) - len(todo), a.llm, a.loop, "live" if a.live else "dry-run"))
+    n_err = n_transport = consecutive_transport = 0
     for n, item in enumerate(todo, 1):
         t0 = time.time()
         try:
-            run = run_one(item, a, config.Budget(**kw))
+            run = run_one(item, a, config.Budget.for_loop(a.loop, **kw))
             rec = summarize_run(run, time.time() - t0, item)
             rep = rec["report"] or {}
+            tr = transport_failure(run)
+            if tr:                                                   # quota / outage: not a model answer, so --resume must redo it
+                rec["error"] = tr
+                n_err += 1
+                n_transport += 1
             print("[%d/%d] %s %-22s -> %s (%.2f) %ss q=%d" % (n, len(todo), item["key"], item["stratum"], rep.get("classification"),
                                                              float(rep.get("confidence") or 0), rec["elapsed_s"], len(rec["queries"])))
         except KeyboardInterrupt:
@@ -145,6 +169,13 @@ def main(argv=None) -> int:
             print("[%d/%d] %s ERROR %s" % (n, len(todo), item["key"], rec["error"]), file=sys.stderr)
         with results.open("a", encoding="utf-8") as f:
             f.write(json.dumps(rec, ensure_ascii=False, default=str) + "\n")
+        if str(rec.get("error") or "").startswith("LLM transport"):
+            consecutive_transport += 1
+            if consecutive_transport >= 3:
+                print("aborting: 3 tickets in a row failed on LLM transport (daily quota / outage?); rerun with --resume later", file=sys.stderr)
+                return 3
+        else:
+            consecutive_transport = 0
         if n < len(todo) and a.delay > 0 and (a.live or a.llm == "http"):
             time.sleep(a.delay)
     print("done: %d ok, %d errors -> %s" % (len(todo) - n_err, n_err, results))

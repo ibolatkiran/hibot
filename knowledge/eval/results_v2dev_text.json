@@ -1,0 +1,646 @@
+{
+ "overall": {
+  "n": 7,
+  "errors": 0,
+  "n_reliable_labels": 5,
+  "wo_resolution_acc": 1.0,
+  "wo_n": 5,
+  "tenant_resolution_acc": 1.0,
+  "tenant_n": 5,
+  "class_exact_acc_all": 0.7143,
+  "class_lenient_acc_all": 1.0,
+  "class_exact_acc_reliable": 0.6,
+  "class_lenient_acc_reliable": 1.0,
+  "findings_hit_rate": 1.0,
+  "findings_total": 18,
+  "rct_acc_reliable": 1.0,
+  "ra_acc_reliable": 1.0,
+  "both_acc_reliable": 1.0,
+  "rct_acc_all": 1.0,
+  "both_acc_all": 1.0,
+  "cw_rct_rate_reliable": 0.0,
+  "cw_rct_n_reliable": 0,
+  "honest_unknown_rate": 0.0,
+  "confidently_wrong_rate_reliable": 0.4,
+  "confidently_wrong_n_reliable": 2,
+  "confidently_wrong_rate_all": 0.2857,
+  "avg_elapsed_s": 24.53,
+  "avg_queries_total": 4.571,
+  "avg_queries_executed": 4.571,
+  "avg_llm_calls": 2.286,
+  "avg_steps": 2.286,
+  "avg_tool_calls": 1.0,
+  "card_match_rate": 0.8571
+ },
+ "calibration": [
+  {
+   "bucket": "0.0-0.4",
+   "n": 0,
+   "accuracy": null,
+   "mean_confidence": null
+  },
+  {
+   "bucket": "0.4-0.7",
+   "n": 0,
+   "accuracy": null,
+   "mean_confidence": null
+  },
+  {
+   "bucket": "0.7-1.0",
+   "n": 5,
+   "accuracy": 0.6,
+   "mean_confidence": 0.848
+  }
+ ],
+ "calibration_rct": [
+  {
+   "bucket": "0.0-0.4",
+   "n": 0,
+   "accuracy": null,
+   "mean_confidence": null
+  },
+  {
+   "bucket": "0.4-0.7",
+   "n": 0,
+   "accuracy": null,
+   "mean_confidence": null
+  },
+  {
+   "bucket": "0.7-1.0",
+   "n": 5,
+   "accuracy": 1.0,
+   "mean_confidence": 0.848
+  }
+ ],
+ "confusion_rct_reliable": {
+  "change_request": {
+   "change_request": 1
+  },
+  "config": {
+   "config": 2
+  },
+  "master_data": {
+   "master_data": 1
+  },
+  "user_error": {
+   "user_error": 1
+  }
+ },
+ "by_stratum": {
+  "capability_gating": {
+   "n": 1,
+   "errors": 0,
+   "n_reliable_labels": 1,
+   "wo_resolution_acc": null,
+   "wo_n": 0,
+   "tenant_resolution_acc": null,
+   "tenant_n": 0,
+   "class_exact_acc_all": 1.0,
+   "class_lenient_acc_all": 1.0,
+   "class_exact_acc_reliable": 1.0,
+   "class_lenient_acc_reliable": 1.0,
+   "findings_hit_rate": 1.0,
+   "findings_total": 2,
+   "rct_acc_reliable": 1.0,
+   "ra_acc_reliable": 1.0,
+   "both_acc_reliable": 1.0,
+   "rct_acc_all": 1.0,
+   "both_acc_all": 1.0,
+   "cw_rct_rate_reliable": 0.0,
+   "cw_rct_n_reliable": 0,
+   "honest_unknown_rate": 0.0,
+   "confidently_wrong_rate_reliable": 0.0,
+   "confidently_wrong_n_reliable": 0,
+   "confidently_wrong_rate_all": 0.0,
+   "avg_elapsed_s": 33.15,
+   "avg_queries_total": 2.0,
+   "avg_queries_executed": 2.0,
+   "avg_llm_calls": 3.0,
+   "avg_steps": 3.0,
+   "avg_tool_calls": 1.0,
+   "card_match_rate": 0.0
+  },
+  "functional_defect": {
+   "n": 1,
+   "errors": 0,
+   "n_reliable_labels": 0,
+   "wo_resolution_acc": null,
+   "wo_n": 0,
+   "tenant_resolution_acc": null,
+   "tenant_n": 0,
+   "class_exact_acc_all": 1.0,
+   "class_lenient_acc_all": 1.0,
+   "class_exact_acc_reliable": null,
+   "class_lenient_acc_reliable": null,
+   "findings_hit_rate": 1.0,
+   "findings_total": 1,
+   "rct_acc_reliable": null,
+   "ra_acc_reliable": null,
+   "both_acc_reliable": null,
+   "rct_acc_all": 1.0,
+   "both_acc_all": 1.0,
+   "cw_rct_rate_reliable": null,
+   "cw_rct_n_reliable": 0,
+   "honest_unknown_rate": 0.0,
+   "confidently_wrong_rate_reliable": null,
+   "confidently_wrong_n_reliable": 0,
+   "confidently_wrong_rate_all": 0.0,
+   "avg_elapsed_s": 32.65,
+   "avg_queries_total": 1.0,
+   "avg_queries_executed": 1.0,
+   "avg_llm_calls": 5.0,
+   "avg_steps": 5.0,
+   "avg_tool_calls": 4.0,
+   "card_match_rate": 1.0
+  },
+  "master_data_request": {
+   "n": 1,
+   "errors": 0,
+   "n_reliable_labels": 1,
+   "wo_resolution_acc": 1.0,
+   "wo_n": 1,
+   "tenant_resolution_acc": 1.0,
+   "tenant_n": 1,
+   "class_exact_acc_all": 1.0,
+   "class_lenient_acc_all": 1.0,
+   "class_exact_acc_reliable": 1.0,
+   "class_lenient_acc_reliable": 1.0,
+   "findings_hit_rate": 1.0,
+   "findings_total": 3,
+   "rct_acc_reliable": 1.0,
+   "ra_acc_reliable": 1.0,
+   "both_acc_reliable": 1.0,
+   "rct_acc_all": 1.0,
+   "both_acc_all": 1.0,
+   "cw_rct_rate_reliable": 0.0,
+   "cw_rct_n_reliable": 0,
+   "honest_unknown_rate": 0.0,
+   "confidently_wrong_rate_reliable": 0.0,
+   "confidently_wrong_n_reliable": 0,
+   "confidently_wrong_rate_all": 0.0,
+   "avg_elapsed_s": 30.0,
+   "avg_queries_total": 5.0,
+   "avg_queries_executed": 5.0,
+   "avg_llm_calls": 3.0,
+   "avg_steps": 3.0,
+   "avg_tool_calls": 1.0,
+   "card_match_rate": 1.0
+  },
+  "status_footprint": {
+   "n": 3,
+   "errors": 0,
+   "n_reliable_labels": 3,
+   "wo_resolution_acc": 1.0,
+   "wo_n": 3,
+   "tenant_resolution_acc": 1.0,
+   "tenant_n": 3,
+   "class_exact_acc_all": 0.3333,
+   "class_lenient_acc_all": 1.0,
+   "class_exact_acc_reliable": 0.3333,
+   "class_lenient_acc_reliable": 1.0,
+   "findings_hit_rate": 1.0,
+   "findings_total": 9,
+   "rct_acc_reliable": 1.0,
+   "ra_acc_reliable": 1.0,
+   "both_acc_reliable": 1.0,
+   "rct_acc_all": 1.0,
+   "both_acc_all": 1.0,
+   "cw_rct_rate_reliable": 0.0,
+   "cw_rct_n_reliable": 0,
+   "honest_unknown_rate": 0.0,
+   "confidently_wrong_rate_reliable": 0.6667,
+   "confidently_wrong_n_reliable": 2,
+   "confidently_wrong_rate_all": 0.6667,
+   "avg_elapsed_s": 18.443,
+   "avg_queries_total": 6.0,
+   "avg_queries_executed": 6.0,
+   "avg_llm_calls": 1.0,
+   "avg_steps": 1.0,
+   "avg_tool_calls": 0.0,
+   "card_match_rate": 1.0
+  },
+  "status_nochange": {
+   "n": 1,
+   "errors": 0,
+   "n_reliable_labels": 0,
+   "wo_resolution_acc": 1.0,
+   "wo_n": 1,
+   "tenant_resolution_acc": 1.0,
+   "tenant_n": 1,
+   "class_exact_acc_all": 1.0,
+   "class_lenient_acc_all": 1.0,
+   "class_exact_acc_reliable": null,
+   "class_lenient_acc_reliable": null,
+   "findings_hit_rate": 1.0,
+   "findings_total": 3,
+   "rct_acc_reliable": null,
+   "ra_acc_reliable": null,
+   "both_acc_reliable": null,
+   "rct_acc_all": 1.0,
+   "both_acc_all": 1.0,
+   "cw_rct_rate_reliable": null,
+   "cw_rct_n_reliable": 0,
+   "honest_unknown_rate": 0.0,
+   "confidently_wrong_rate_reliable": null,
+   "confidently_wrong_n_reliable": 0,
+   "confidently_wrong_rate_all": 0.0,
+   "avg_elapsed_s": 20.58,
+   "avg_queries_total": 6.0,
+   "avg_queries_executed": 6.0,
+   "avg_llm_calls": 2.0,
+   "avg_steps": 2.0,
+   "avg_tool_calls": 1.0,
+   "card_match_rate": 1.0
+  }
+ },
+ "confusion_reliable": {
+  "change_request": {
+   "change_request": 1
+  },
+  "data_correction": {
+   "config": 2
+  },
+  "master_data": {
+   "master_data": 1
+  },
+  "user_error": {
+   "user_error": 1
+  }
+ },
+ "split": "dev",
+ "missing_keys": [],
+ "tickets": [
+  {
+   "key": "SM-2139009",
+   "stratum": "status_footprint",
+   "split": "dev",
+   "label_confidence": "medium",
+   "reliable": true,
+   "expected": "data_correction",
+   "got": "config",
+   "confidence": 0.88,
+   "error": null,
+   "elapsed_s": 20.19,
+   "llm_calls": 1,
+   "steps": 1,
+   "tool_calls": 0,
+   "queries_total": 6,
+   "queries_executed": 6,
+   "matched_card": {
+    "id": "draft_footprint_t68_329_to_314",
+    "score": 1.0
+   },
+   "expected_rct": "config",
+   "expected_ra": "data_fix",
+   "got_rct": "config",
+   "got_ra": "data_fix",
+   "confidence_raw": 0.88,
+   "caps": [],
+   "rct_ok": true,
+   "ra_ok": true,
+   "both_ok": true,
+   "cw_rct": false,
+   "exact": false,
+   "lenient": true,
+   "confidently_wrong": true,
+   "honest_unknown": false,
+   "wo_applicable": true,
+   "wo_ok": true,
+   "tenant_applicable": true,
+   "tenant_ok": true,
+   "findings": [
+    {
+     "type": "wo_resolved",
+     "hit": true
+    },
+    {
+     "type": "manual_fix_detected",
+     "hit": true
+    },
+    {
+     "type": "transition_missing",
+     "hit": true
+    }
+   ],
+   "findings_hit": 3,
+   "findings_total": 3
+  },
+  {
+   "key": "SM-2139002",
+   "stratum": "status_footprint",
+   "split": "dev",
+   "label_confidence": "medium",
+   "reliable": true,
+   "expected": "data_correction",
+   "got": "config",
+   "confidence": 0.88,
+   "error": null,
+   "elapsed_s": 19.71,
+   "llm_calls": 1,
+   "steps": 1,
+   "tool_calls": 0,
+   "queries_total": 6,
+   "queries_executed": 6,
+   "matched_card": {
+    "id": "draft_footprint_t68_329_to_314",
+    "score": 1.0
+   },
+   "expected_rct": "config",
+   "expected_ra": "data_fix",
+   "got_rct": "config",
+   "got_ra": "data_fix",
+   "confidence_raw": 0.88,
+   "caps": [],
+   "rct_ok": true,
+   "ra_ok": true,
+   "both_ok": true,
+   "cw_rct": false,
+   "exact": false,
+   "lenient": true,
+   "confidently_wrong": true,
+   "honest_unknown": false,
+   "wo_applicable": true,
+   "wo_ok": true,
+   "tenant_applicable": true,
+   "tenant_ok": true,
+   "findings": [
+    {
+     "type": "wo_resolved",
+     "hit": true
+    },
+    {
+     "type": "manual_fix_detected",
+     "hit": true
+    },
+    {
+     "type": "transition_missing",
+     "hit": true
+    }
+   ],
+   "findings_hit": 3,
+   "findings_total": 3
+  },
+  {
+   "key": "SM-2126600",
+   "stratum": "status_footprint",
+   "split": "dev",
+   "label_confidence": "high",
+   "reliable": true,
+   "expected": "user_error",
+   "got": "user_error",
+   "confidence": 0.88,
+   "error": null,
+   "elapsed_s": 15.43,
+   "llm_calls": 1,
+   "steps": 1,
+   "tool_calls": 0,
+   "queries_total": 6,
+   "queries_executed": 6,
+   "matched_card": {
+    "id": "draft_footprint_t70_2271_to_2257",
+    "score": 1.0
+   },
+   "expected_rct": "user_error",
+   "expected_ra": "explain_to_user",
+   "got_rct": "user_error",
+   "got_ra": "explain_to_user",
+   "confidence_raw": 0.88,
+   "caps": [],
+   "rct_ok": true,
+   "ra_ok": true,
+   "both_ok": true,
+   "cw_rct": false,
+   "exact": true,
+   "lenient": true,
+   "confidently_wrong": false,
+   "honest_unknown": false,
+   "wo_applicable": true,
+   "wo_ok": true,
+   "tenant_applicable": true,
+   "tenant_ok": true,
+   "findings": [
+    {
+     "type": "wo_resolved",
+     "hit": true
+    },
+    {
+     "type": "manual_fix_detected",
+     "hit": true
+    },
+    {
+     "type": "not_code_defect",
+     "hit": true
+    }
+   ],
+   "findings_hit": 3,
+   "findings_total": 3
+  },
+  {
+   "key": "SM-2122480",
+   "stratum": "status_nochange",
+   "split": "dev",
+   "label_confidence": "low",
+   "reliable": false,
+   "expected": "integration",
+   "got": "integration",
+   "confidence": 0.7,
+   "error": null,
+   "elapsed_s": 20.58,
+   "llm_calls": 2,
+   "steps": 2,
+   "tool_calls": 1,
+   "queries_total": 6,
+   "queries_executed": 6,
+   "matched_card": {
+    "id": "draft_footprint_t70_2271_to_2257",
+    "score": 0.8
+   },
+   "expected_rct": "integration",
+   "expected_ra": "escalate_other_system",
+   "got_rct": "integration",
+   "got_ra": "escalate_other_system",
+   "confidence_raw": 0.7,
+   "caps": [],
+   "rct_ok": true,
+   "ra_ok": true,
+   "both_ok": true,
+   "cw_rct": false,
+   "exact": true,
+   "lenient": true,
+   "confidently_wrong": false,
+   "honest_unknown": false,
+   "wo_applicable": true,
+   "wo_ok": true,
+   "tenant_applicable": true,
+   "tenant_ok": true,
+   "findings": [
+    {
+     "type": "wo_resolved",
+     "hit": true
+    },
+    {
+     "type": "no_manual_fix",
+     "hit": true
+    },
+    {
+     "type": "mentions",
+     "hit": true
+    }
+   ],
+   "findings_hit": 3,
+   "findings_total": 3
+  },
+  {
+   "key": "SM-2172385",
+   "stratum": "capability_gating",
+   "split": "dev",
+   "label_confidence": "high",
+   "reliable": true,
+   "expected": "change_request",
+   "got": "change_request",
+   "confidence": 0.8,
+   "error": null,
+   "elapsed_s": 33.15,
+   "llm_calls": 3,
+   "steps": 3,
+   "tool_calls": 1,
+   "queries_total": 2,
+   "queries_executed": 2,
+   "matched_card": null,
+   "expected_rct": "change_request",
+   "expected_ra": "route_to_backlog",
+   "got_rct": "change_request",
+   "got_ra": "route_to_backlog",
+   "confidence_raw": 0.8,
+   "caps": [],
+   "rct_ok": true,
+   "ra_ok": true,
+   "both_ok": true,
+   "cw_rct": false,
+   "exact": true,
+   "lenient": true,
+   "confidently_wrong": false,
+   "honest_unknown": false,
+   "wo_applicable": false,
+   "wo_ok": false,
+   "tenant_applicable": false,
+   "tenant_ok": false,
+   "findings": [
+    {
+     "type": "query_used",
+     "hit": true
+    },
+    {
+     "type": "mentions",
+     "hit": true
+    }
+   ],
+   "findings_hit": 2,
+   "findings_total": 2
+  },
+  {
+   "key": "SM-2169006",
+   "stratum": "master_data_request",
+   "split": "dev",
+   "label_confidence": "high",
+   "reliable": true,
+   "expected": "master_data",
+   "got": "master_data",
+   "confidence": 0.8,
+   "error": null,
+   "elapsed_s": 30.0,
+   "llm_calls": 3,
+   "steps": 3,
+   "tool_calls": 1,
+   "queries_total": 5,
+   "queries_executed": 5,
+   "matched_card": {
+    "id": "example_missing_tenant_for_sku",
+    "score": 0.45
+   },
+   "expected_rct": "master_data",
+   "expected_ra": "master_data_change",
+   "got_rct": "master_data",
+   "got_ra": "master_data_change",
+   "confidence_raw": 0.8,
+   "caps": [],
+   "rct_ok": true,
+   "ra_ok": true,
+   "both_ok": true,
+   "cw_rct": false,
+   "exact": true,
+   "lenient": true,
+   "confidently_wrong": false,
+   "honest_unknown": false,
+   "wo_applicable": true,
+   "wo_ok": true,
+   "tenant_applicable": true,
+   "tenant_ok": true,
+   "findings": [
+    {
+     "type": "wo_resolved",
+     "hit": true
+    },
+    {
+     "type": "query_used",
+     "hit": true
+    },
+    {
+     "type": "mentions",
+     "hit": true
+    }
+   ],
+   "findings_hit": 3,
+   "findings_total": 3
+  },
+  {
+   "key": "SM-1777386",
+   "stratum": "functional_defect",
+   "split": "dev",
+   "label_confidence": "low",
+   "reliable": false,
+   "expected": "code_defect",
+   "got": "code_defect",
+   "confidence": 0.6,
+   "error": null,
+   "elapsed_s": 32.65,
+   "llm_calls": 5,
+   "steps": 5,
+   "tool_calls": 4,
+   "queries_total": 1,
+   "queries_executed": 1,
+   "matched_card": {
+    "id": "example_history_shows_one_record",
+    "score": 0.375
+   },
+   "expected_rct": "code_defect",
+   "expected_ra": "code_change",
+   "got_rct": "code_defect",
+   "got_ra": "code_change",
+   "confidence_raw": 0.7,
+   "caps": [
+    "no_executed_supporting_evidence"
+   ],
+   "rct_ok": true,
+   "ra_ok": true,
+   "both_ok": true,
+   "cw_rct": false,
+   "exact": true,
+   "lenient": true,
+   "confidently_wrong": false,
+   "honest_unknown": false,
+   "wo_applicable": false,
+   "wo_ok": false,
+   "tenant_applicable": false,
+   "tenant_ok": false,
+   "findings": [
+    {
+     "type": "mentions",
+     "hit": true
+    }
+   ],
+   "findings_hit": 1,
+   "findings_total": 1
+  }
+ ]
+}

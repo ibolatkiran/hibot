@@ -23,3 +23,7 @@ Many "requests" are not bugs. The feature often **already exists** but is hidden
 - Partner `Summary.js:73-90`: the edit button is gated by `SYSTEM_CONFIG.Live.repairDateEditUserTypeIds = [1218, 1233]`, with the comments "EG: GFSM-7863" and "TODO: yeni ülkenin user type Id'leri eklenecek".
 - `Catalog.SiriusUserType`: 1218 = T70 Egypt BackOffice-HQ, 1233 = T76 Morocco BackOffice-HQ. Morocco Service partner (920) is not in the list.
 - Options: (a) Morocco BackOffice-HQ fixes dates today; (b) add 920 if the business approves; (c) move the list to tenant config. (FINDINGS §17)
+
+## Also check how the value is set today (request = "correct / update field X")
+7. `column_writers(table, column)` for the field behind the request: is it set AUTOMATICALLY by a status step (e.g. in `WorkOrder.UpdateStatus`, payment control, send-to-center), so that the real answer is "the date comes from action Y; the manual edit is only an override"? Count the audit rows of the manual feature for the tenant (e.g. `Log.WorkOrderDateEditAction`: 0 rows = the override is never used there) and compare one work order's `wo_field_changes` around the status change. Put this in the report next to the gating finding.
+- SM-2172385: `VerificationDate` is auto-set with `GETUTCDATE()` by the status-step SPs (`WorkOrder.UpdateStatus.sql:42-44`), so the closing action determines the "repair date" unless the manual override is used (FINDINGS §20).

@@ -348,11 +348,21 @@ class InvestigationTests(unittest.TestCase):
         self.assertEqual(ex.query_count, 0)
 
     def test_malformed_answer_is_repaired_without_consuming_a_step(self):
-        script = ["sorry, let me think", {"action": "nope"}, final()]
+        script = ["sorry, let me think", {"action": "nope"}, final(), final()]
         llm, out, _ = investigate(script)
-        self.assertEqual(len(out["steps"]), 1)
-        self.assertEqual(out["llm_calls"], 3)
+        self.assertEqual(len(out["steps"]), 2)               # step 1: the zero-evidence final_report is refused once (minimum-evidence guard)
+        self.assertIn("NO EVIDENCE GATHERED", out["steps"][0]["observation"])
+        self.assertEqual(out["llm_calls"], 4)
         llm.assert_prompt_contains("previous answer was invalid", call=2)
+
+    def test_v1_zero_evidence_final_is_refused_once_but_card_decision_is_exempt(self):
+        _, out, _ = investigate([final(), final()], mode=LIVE)            # live: nothing was executed
+        self.assertIn("NO EVIDENCE GATHERED", out["steps"][0]["observation"])
+        self.assertEqual(out["steps"][1]["observation"], "(final report)")
+        ex = make_executor(LIVE, config.Budget(), None)
+        card = "## BİLİNEN SORUN KARTI\nKart: x [confirmed, güven 0.90] t\nDOĞRULAMA SONUCU: DESTEKLİYOR"
+        out2 = Investigation(FakeLLM([final()]), incident(), [], [], ex, card_text=card).run()
+        self.assertEqual(len(out2["steps"]), 1)
 
     def test_unrepairable_output_gives_fallback_report(self):
         _, out, _ = investigate([], default="not json at all")
@@ -446,6 +456,8 @@ class CardTests(unittest.TestCase):
         for c in cs:
             if c["status"] != "draft":                       # only a user review (cards confirm/reject) may change the status
                 self.assertTrue(any(h.get("who") == "user" and h.get("event") == c["status"] for h in c["history"]), c["id"])
+                if "developer feedback" in (c.get("created_by") or ""):       # promoted by a one-click verdict: carries the run's axes
+                    self.assertTrue(c.get("root_cause_type") and c.get("resolution_action"), c["id"])
                 continue
             if c.get("created_by") != "batch_footprint":      # tools/learning drafts are real, unconfirmed candidates
                 self.assertIn("EXAMPLE", c["title"])
@@ -564,6 +576,16 @@ class PipelineAndFeedbackTests(unittest.TestCase):
         for bad in ("../x", "a/b", "", "x"):
             with self.assertRaises(ValueError):
                 store.run_path(bad)
+
+    def test_promoted_card_carries_axes_and_user_confirmation(self):
+        sug = {"title": "Adhoc report rate", "symptom_signature": {"keywords": ["adhoc report"]}, "root_cause": "rate missing",
+               "fix_steps": ["add rate"]}
+        run = self._analyze([final(suggested_card=sug, root_cause_type="config", resolution_action="config_change", classification="config")])
+        feedback.record_feedback(run["run_id"], "correct")
+        card = json.loads((self.cards / "adhoc_report_rate.json").read_text(encoding="utf-8"))
+        self.assertEqual((card["root_cause_type"], card["resolution_action"], card["classification"]), ("config", "config_change", "config"))
+        self.assertTrue(any(h.get("who") == "user" and h["event"] == "confirmed" for h in card["history"]))
+        self.assertEqual(cardmod.validate_card(card), [])
 
     def test_feedback_correct_creates_confirmed_card(self):
         sug = {"title": "Missing tenant for SKU", "symptom_signature": {"problem_type": "master_data_request", "app": None,
