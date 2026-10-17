@@ -86,5 +86,12 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
     - NavBar'a "HiBot" bölümü eklendi. Yeni bağımlılıklar: `react-markdown` 9.0.1 (raw HTML yok), `remark-gfm` 4.0.0.
     - Koordinatör denetimi: 44/44 jest testi geçiyor; yol kalıbı `hibot/...` monitoring ile tutarlı; API `report`'u JsonElement nesnesi olarak dönüyor, UI ile uyumlu.
     - Uçtan uca deneme için gerekenler: Monitoring DB'ye migration, API'de `HiBot:ServiceKey`, `.env`'de `HIBOT_SERVICE_KEY`.
+43. Uçtan uca hazırlık:
+    - Kullanıcı `HiBot:ServiceKey`'i API'nin `appsettings.json` dosyasına, `HIBOT_SERVICE_KEY`'i `.env`'e koydu (hash karşılaştırmasıyla eşit). ⚠️ `appsettings.json` git'te izleniyor; user secrets'a taşınması önerildi.
+    - ⚠️ `appsettings.json`'da önceden commit edilmiş açık metin bir MongoDB bağlantı dizesi var. Kullanıcıya bildirildi; değer tekrar yazılmadı.
+    - Monitoring DB ayarı yerelde yoktu. Kod Monitoring şemasının GFSM DB'sinde durduğunu söylüyor; `GfsmConnection` = `gfsmpreprod` (test sunucusu).
+    - Kullanıcı onayıyla önce bekleyen migration'lar listelendi (sadece `AddHiBotAnalyses` bekliyordu), sonra **sadece o migration uygulandı**. Ortam `Development` olarak zorlandı, bağlantı dizesi sadece süreç ortamında verildi.
+    - HiBot servisi `127.0.0.1:8077`'de çalışıyor (health 200).
+    - **Risk tespiti:** yerel API'nin Hangfire sunucusu paylaşılan preprod deposunda preprod'un job'larını (monitor, bildirim) işler; açılıştaki zamanlama senkronu preprod'un zamanlanmış job'larını ekleyip silebilir. → API agent'ına güvenli yerel çalıştırma ayarları verildi: `hibot` kuyruğu, `Hangfire:ServerQueues`, `Monitoring:Scheduling:SyncOnStartup`, bootstrap anahtarı. API bu ayarlar olmadan başlatılmadı.
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.
