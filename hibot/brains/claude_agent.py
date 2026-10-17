@@ -140,7 +140,8 @@ class Cost:
         return (t["input"] * i + t["output"] * o + t["cache_read"] * cr + t["cache_write"] * cw) / 1e6
 
 
-def investigate(key: str, model: str, effort: str, max_usd: float, max_steps: int) -> Path:
+def investigate(key: str, model: str, effort: str, max_usd: float, max_steps: int) -> tuple:
+    """Run one investigation. Returns (run_dir, info) where info has report_text, trace (tool calls + results), usage."""
     import anthropic
 
     # Organisation-level keys must name the workspace on every request (400 "not scoped to a workspace" otherwise).
@@ -155,6 +156,7 @@ def investigate(key: str, model: str, effort: str, max_usd: float, max_steps: in
     run_dir.mkdir(parents=True, exist_ok=True)
     log = (run_dir / "transcript.jsonl").open("w", encoding="utf-8")
     cost, steps, final_text, stop = Cost(model), 0, "", None
+    trace: List[dict] = []
     extra: Dict[str, Any] = {}
     if model in SERVER_FALLBACK_MODELS:
         extra = {"betas": ["server-side-fallback-2026-07-01"], "fallbacks": "default"}
@@ -186,6 +188,7 @@ def investigate(key: str, model: str, effort: str, max_usd: float, max_steps: in
         results = []
         for b in uses:
             text, is_err = run_tool(b.name, dict(b.input or {}))
+            trace.append({"step": steps, "name": b.name, "input": dict(b.input or {}), "ok": not is_err, "result": text})
             results.append({"type": "tool_result", "tool_use_id": b.id, "content": text, "is_error": is_err})
         messages.append({"role": "user", "content": results})
 
@@ -195,7 +198,7 @@ def investigate(key: str, model: str, effort: str, max_usd: float, max_steps: in
              "usd": round(cost.usd, 4), "tokens": cost.tok, "seconds": round(time.time() - t0, 1)}
     (run_dir / "usage.json").write_text(json.dumps(usage, indent=1), encoding="utf-8")
     print("\nRapor: %s\nAdım: %d | maliyet: $%.3f | süre: %.0f sn" % (run_dir / "report.md", steps, cost.usd, usage["seconds"]))
-    return run_dir
+    return run_dir, {"report_text": final_text, "trace": trace, "usage": usage}
 
 
 def main(argv=None) -> int:
