@@ -81,5 +81,10 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
 41. **DbChangeTracking API modülü tamamlandı** (`feature/hibot-module`, commit yok).
     - Domain, EF yapılandırması, migration `AddHiBotAnalyses` (uygulanmadı), typed client, servis, Hangfire poll job'ı, `api/hibot` controller'ı, audit, `TASK_23_HIBOT_MODULE.md`.
     - Koordinatör denetimi: dal doğru; kullanıcının iki dosyası dokunulmamış; 124/124 test (`DOTNET_ROLL_FORWARD=Major`, makinede sadece .NET 10 runtime var); servis anahtarı loglanmıyor; tüm uçlarda kullanıcı kimliği kontrol ediliyor.
+42. **DbChangeTracking UI sayfaları tamamlandı** (`feature/hibot-module`, commit yok).
+    - Sayfalar: Analizler, Yeni Analiz, Analiz Detayı (4 sn'de bir durum sorgusu, güvenli Markdown render, Doğru/Yanlış/Kısmen geri bildirimi), Bilinen Sorunlar.
+    - NavBar'a "HiBot" bölümü eklendi. Yeni bağımlılıklar: `react-markdown` 9.0.1 (raw HTML yok), `remark-gfm` 4.0.0.
+    - Koordinatör denetimi: 44/44 jest testi geçiyor; yol kalıbı `hibot/...` monitoring ile tutarlı; API `report`'u JsonElement nesnesi olarak dönüyor, UI ile uyumlu.
+    - Uçtan uca deneme için gerekenler: Monitoring DB'ye migration, API'de `HiBot:ServiceKey`, `.env`'de `HIBOT_SERVICE_KEY`.
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.
