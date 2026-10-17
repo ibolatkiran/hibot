@@ -143,7 +143,9 @@ class Cost:
 def investigate(key: str, model: str, effort: str, max_usd: float, max_steps: int) -> Path:
     import anthropic
 
-    client = anthropic.Anthropic()
+    # Organisation-level keys must name the workspace on every request (400 "not scoped to a workspace" otherwise).
+    ws = os.environ.get("ANTHROPIC_WORKSPACE_ID")
+    client = anthropic.Anthropic(default_headers={"anthropic-workspace-id": ws} if ws else None)
     protocol = (SKILLS_DIR / "investigation_protocol.md").read_text(encoding="utf-8")
     system = SYSTEM_TEMPLATE.format(protocol=protocol, skills_index=_skills_index())
     tools = build_tools()
