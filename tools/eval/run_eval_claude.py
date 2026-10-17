@@ -162,7 +162,7 @@ def cmd_score(a):
                ("honest unknown", "honest_unknown_rate", "%"), ("avg seconds", "avg_elapsed_s", "{}"),
                ("avg LLM calls", "avg_llm_calls", "{}")]
     L = ["# Claude vs ArGPT on the same %d test tickets" % len(keys), "",
-         "Subset: `knowledge/eval/subset20.json` (stratified half of the test split, reliable labels preferred). "
+         "Subset: %s (stratified part of the test split, reliable labels preferred). " % ("`%s`" % a.eval_set if a.eval_set else "`knowledge/eval/subset20.json`") +
          "Silver labels; headline metrics on reliable labels. Claude limitation: `manual_fix_detected` only hits when "
          "the model called `ticket_window` itself.", "",
          "| metric | " + " | ".join(t for t, *_ in rows) + " |", "|---|" + "---|" * len(rows)]

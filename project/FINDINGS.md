@@ -749,6 +749,23 @@ Tam tablo ve gerekçe: `knowledge/eval/compare_holdout2.md`. 40 yeni EU ticket'�
 - Her iki döngünün ortak zayıf noktaları: `status_nochange` (veri düzeltme aksiyonuna hiç ulaşılmıyor), `integration_failure` (v1 ikisini `master_data` sanıyor, 0,78 güvenle), `performance_report` (kanıt yok; v1 dürüstçe unknown).
 - Sonuç (D27): varsayılan v1. Bir sonraki büyük adım native tool calling (D25). holdout2 harcandı, yeni kör set gerekli.
 
+## 25. Claude Haiku 5.5 (native tool calling) holdout2'de, 2026-10-17
+
+Kullanıcı onayıyla Anthropic API (D20'deki ArGPT zorunluluğu bu deney için gevşetildi; servis/otomasyon için geçerli değil). `compare_holdout2_claude_haiku.md`: aynı 40 ticket, 38 güvenilir etiket, tek koşu, ayar yok. Maliyet $0,705.
+
+| metrik (güvenilir etiket) | Haiku | v1 | v2 |
+|---|---|---|---|
+| kök neden türü | 55% | **68%** | 45% |
+| iki eksen | 45% | **58%** | 42% |
+| emin-yanlış (rct) | 8% | 11% | 5% |
+| ort. süre / LLM çağrısı | 87 sn / 14,2 | **24,6 sn / 2,6** | 66 sn / 6,9 |
+
+- Haiku v1'i geçmedi. Ticket bazında v1 doğru-Haiku yanlış: SM-1881470, SM-1979237, SM-1905442, SM-2029368, SM-2083959, SM-1802347, SM-2039109 (7); tersi: SM-1871288 (1).
+- Haiku'nun kayıpları `master_data_request` (67% vs 100%), `functional_defect` (43% vs 71%), `status_nochange` (40% vs 60%), `integration_failure` (20% vs 40%): v1'in deterministik ön adımları (tenant/SKU/WO çözümü, temel sorgu setleri, ticket penceresi) burada farkı yaratıyor. Haiku bunları kendisi çağırmak zorunda, çağırmıyor ya da yanlış sırayla çağırıyor. Bu, §23'teki "deterministik case file en büyük katkı" bulgusunu doğruluyor.
+- Güvenler 0,3–0,8 aralığında, dürüst: emin-yanlış(rct) %8, 0,7+ bandında az cevap.
+- Native tool calling tek başına (Haiku, case file yok) ArGPT v1'in önüne geçmiyor. Test edilmemiş: Sonnet/Opus, ve case file + tool calling birleşimi.
+- Not: bu sonuçlara bakıp tasarlanacak bir birleşik döngü holdout2'de adil ölçülemez (D19), yeni kör set (holdout3) gerekir.
+
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
 Önyüzün çağırdığı ama backend'de karşılığı olmayan **109 benzersiz çağrı** var, liste: `knowledge/codemap/trace_index.json` → `unmatched_frontend_calls`. Örnekler:
