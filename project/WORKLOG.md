@@ -107,3 +107,8 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
     - dev'de iterasyon, sonra hold-out'ta v1 ve v2 karşılaştırması → varsayılan kararı
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.
+
+## Bulut oturumu (2026-10-17, devam)
+- HANDOFF'tan devam. `holdout2.json` bütünlüğü doğrulandı: README'deki sha256, dosya CRLF satır sonlarıyla hesaplanmış; git LF'e normalize ettiği için bulutta farklı çıkıyordu. `tests/test_round3.py` ve `tools/eval/build_holdout2.py` hash'i satır sonundan bağımsız hesaplıyor (içerik değişmedi).
+- Bulutta `knowledge/schema/objects.json` vb. üretilmiş dosyalar yok (kardeş repolar yok) → test setinde ~65 ortam kaynaklı hata WIP öncesinde de vardı; tur 3'ün 3 kalibrasyon testi de aynı nedenle (ad-hoc SQL doğrulaması reddedilir) bulutta geçmez. Yerelde `tools/*/build.py` sonrası tekrar çalıştır.
+- Sıradaki (yerelde): tam test, adım 3–6 (checklist/plan/critic doğrulama, dev iterasyonu, holdout2 son koşusu).

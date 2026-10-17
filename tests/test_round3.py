@@ -330,7 +330,7 @@ class Holdout2Tests(unittest.TestCase):
         readme = (ROOT / "knowledge" / "eval" / "README.md").read_text(encoding="utf-8")
         m = re.search(r"holdout2\.json sha256: `([0-9a-f]{64})`", readme)
         self.assertTrue(m)
-        self.assertEqual(hashlib.sha256(f.read_bytes()).hexdigest(), m.group(1), "holdout2.json changed after it was frozen")
+        self.assertEqual(hashlib.sha256(f.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")).hexdigest(), m.group(1), "holdout2.json changed after it was frozen")
         keys = [t["key"] for t in data["tickets"]]
         self.assertEqual(len(keys), len(set(keys)))
         self.assertGreaterEqual(len(keys), 38)
