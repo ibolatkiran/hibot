@@ -102,6 +102,12 @@ Kapsam sınırları: ticket'ların ~%34'ü Sirius dışı (Manusoft, Contact, Sa
 - ⬜ Karşılaştırma: eski ve yeni döngü (dev + test), ayrıca SM-2172385 / SM-2169006'da Claude Code headless (Sonnet) + MCP denemesi
 - ⬜ Developer'lar için Claude Code + HiBot MCP kurulum rehberi (zor vakalar)
 - ⬜ Yerel embedding ile benzer ticket araması (D21, sonra)
+- ⬜ **Ek dosya (digiport attachment) desteği (2026-10-17, kullanıcı önerisi):** kullanıcılar sorunu çoğu zaman ekran görüntüsüyle anlatıyor; HiBot ekleri şu an hiç kullanmıyor (Jira export sadece XML metni; `knowledge/incidents/README.md`: sadece-ekran-görüntülü ticket'larda kanıt kaybı). Aşamalar:
+  1. **Ölç (holdout2 koşusu bittikten sonra, D19):** eval (47) ve holdout2 (40) ticket'larında ek var mı (Jira XML `attachments`), ekli ticket'ların isabeti diğerlerinden düşük mü? Görsel indirmek gerekmez.
+  2. Ekleri indir (Jira REST `fields=attachment`, digiport oturumuyla, git dışı klasör).
+  3. OCR (Tesseract / Azure Document Intelligence) → hata mesajı, WO no, ekran adı; case file'a "ekran görüntüsünden okunan" etiketiyle girer.
+  4. Görsel anlayan model (vision): ArGPT destekliyor mu? IT sorusu (D25'e eklendi) veya Claude vision.
+  5. Güvenlik: ekler PII içerebilir; LLM'e gitmeden önce maskeleme / IT onayı, görseller git ve `runs/` dışında. Eval'de ekli ticket'lar ayrı katman.
 
 ## Sıradaki iş (bir sonraki agent için)
 Durum: ArGPT ve EU prod (read-only) bağlı, canlı analiz çalışıyor (FINDINGS §11–12). APAC DB yok.
