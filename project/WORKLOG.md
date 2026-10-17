@@ -64,5 +64,11 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
 32. ArGPT keşfi (D22): `chat-completion` var, tools yok sayılıyor, `embeddings` var (format bilinmiyor). `argpt_chat` adaptörü eklendi.
 33. **Tur 2 tamamlandı** (Sonnet): dev'de iki yeni ticket doğru; test isabeti yerinde sayıyor, entegrasyon %0'a düştü. Koordinatör denetimi: 477 test geçiyor, puan bağımsız olarak doğrulandı. → FINDINGS §19.
 34. Kullanıcı deneme için Claude API hesabı açtı ($5). Koordinatör `hibot/brains/claude_agent.py`'yi yazdı (native tool calling + aynı araçlar ve skill'ler). Kullanıcının `.env`'e `ANTHROPIC_API_KEY` eklemesi bekleniyor.
+35. Claude deneyleri (Haiku 5.5): iki zor ticket koordinatör seviyesinde (FINDINGS §20); rutin alt kümede 5 ticket'tan sonra kullanıcı kredi nedeniyle durdurdu (FINDINGS §21). Toplam harcama ~$0,08.
+36. **Birleşik v2 döngüsü başlatıldı** (Sonnet, sadece ArGPT, Claude API çağrısı yasak):
+    - deterministik case file + ArGPT `chat-completion` üzerinde çok turlu JSON araç protokolü
+    - 18 araç + `read_skill`
+    - ortak sınıflandırma kuralları ve kart benimseme kuralı
+    - Ölçüm dev seti + test setiyle (`v2_20261017`).
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.
