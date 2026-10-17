@@ -53,8 +53,8 @@ runs through `hibot.db.runner.QueryRunner` (read-only, masked, audited). Region 
 {"action":"run_sql","sql":"SELECT TOP 20 ... WHERE TenantId = 5","region":"EU","why":".."}       # ad-hoc, hibot.db.safe_sql, allow_pii=False
 {"action":"inspect_code","target":{"kind":"endpoint|screen|db_object|error_text|text","value":"..","app":"crm"},"why":".."}
 {"action":"read_source","path":"SiriusApi/Sirius/Controllers/X.cs | dbo.GetSiriusWorkOrderHistory | <absolute>","start_line":1,"end_line":80,"why":".."}
-{"action":"final_report","summary":..,"root_cause_type":"config|code_defect|master_data|integration|user_error|access|data_issue|unknown",
- "resolution_action":"data_fix|config_change|code_change|master_data_change|explain_to_user|grant_access|escalate_other_system|none|unknown",
+{"action":"final_report","summary":..,"root_cause_type":"config|code_defect|master_data|integration|user_error|access|data_issue|change_request|unknown",
+ "resolution_action":"data_fix|config_change|code_change|master_data_change|explain_to_user|grant_access|escalate_other_system|route_to_backlog|none|unknown",
  "root_cause":..,"confidence":0.0-1.0,"evidence":[{"type":"query|code|similar_case|card","ref":..,"finding":..}],
  "code_locations":[{"repo":..,"path":..,"line":..,"why":..}],"fix_steps":[..],"verification_query_ids":[..],"suggested_card":{..}}
 ```
@@ -71,6 +71,23 @@ legacy label get axes derived back (`LEGACY_TO_AXES`). A legacy-only `final_repo
 report shows "Kök neden türü" and "Yapılması gereken". Cards have optional `root_cause_type` / `resolution_action`
 (`python tools/learning/add_card_axes.py` migrates: confirmed Egypt card user_error/explain_to_user, footprint drafts config/data_fix, or
 data_issue/data_fix when the transition is configured).
+
+### Round 2 additions
+* **Taxonomy:** `root_cause_type` `change_request` + `resolution_action` `route_to_backlog` (legacy `change_request`, derived). Use: the system works as coded and the reporter wants
+  different behaviour (typically a hard-coded permission list). Permission-scope guidance is in `axes.py` and the system prompt.
+* **UI gating** (`ui_gating.py`, deterministic): for capability / permission tickets ("cannot edit X", "please update field Y") the endpoints of the screen hints whose name shares
+  >= 2 content tokens with the ticket are traced in the code graph; the CALLING screens (`callers`) are opened through the guarded reader and compact gating snippets are extracted
+  (feature token + `includes(`, UserType, RoleId, TenantId, SYSTEM_CONFIG, REACT_APP_, TODO; file:line; hard-coded id lists labelled Live/Test). Injected into the case file as
+  "UI GATING"; `inspect_code` on an endpoint appends the same section to the observation. The playbook then runs `tenant_lookup` (ticket country) + `user_type_lookup` (Ids from the
+  Live list + TenantId) so the ids resolve to tenant + role name.
+* **Column provenance** (`provenance.py`, deterministic): value problems (0 / wrong / missing / not showing) -> column of `Operation.WorkOrder|WorkOrderDetail|WorkCase` whose CamelCase tokens
+  all occur in the ticket (labor->labour, charge->cost ...) -> writer procedures from `knowledge/schema/objects.json` `written_by` filtered by a source grep for `<Column> =` -> compact window of the
+  best one, its input tables/filters and the templates that touch them: "COLUMN PROVENANCE" section (e.g. LabourCost <- dbo.PricingWorkOrder = SUM(Price) of Material.Type = 1 lines).
+* **Playbooks:** labour / price / cost tickets with SKU or WO -> `wo_detail_material_types` (<= 2 WOs) + `product_labour_setup`; notification tickets -> `job_health` +
+  `outbound_queue_backlog` around the ticket time; performance tickets -> `db_errors_recent`, `job_health`, `outbound_queue_backlog` (ticket time +- 24 h); master-data "add" requests
+  whose SKU exists NOW get a SNAPSHOT CAVEAT (tickets are analysed after handling: the object exists because the fix was applied -> master_data, not user_error).
+* **Source guard** (`Investigation._source_unread`): `unknown` / "cannot tell code from configuration" while a stored procedure or screen behind the symptom is known
+  (`Executor.known_sources`: case-file gating/provenance files + inspected objects) and no `read_source` ran is refused once (merged into the early-stop refusal when both apply).
 
 ### Confidence calibration (`calibration.py`, round 1)
 The LLM confidence is post-processed deterministically (in `Investigation._ground` and again in `pipeline` after a card was applied).

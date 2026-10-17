@@ -61,5 +61,8 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
     - Sonunda test seti bir kez çalıştırılacak (D19).
 30. Kullanıcı: "senin kadar yetenekli agent", ArGPT (GPT-4o) zorunlu → D20 / D21. Koordinatör yöntem kitaplığını yazdı (`knowledge/skills`, `07d22cf`).
 31. **Araç katmanı + MCP sunucusu** (Sonnet): 18 araç. Koordinatör denetimi: MCP stdio round-trip çalışıyor, secret arama ve okuma engelli, 443 test geçiyor. Alt agent'ın "bug" dediği şey (unittest altında `.env` yüklenmemesi) bilinçli bir tasarım.
+32. ArGPT keşfi (D22): `chat-completion` var, tools yok sayılıyor, `embeddings` var (format bilinmiyor). `argpt_chat` adaptörü eklendi.
+33. **Tur 2 tamamlandı** (Sonnet): dev'de iki yeni ticket doğru; test isabeti yerinde sayıyor, entegrasyon %0'a düştü. Koordinatör denetimi: 477 test geçiyor, puan bağımsız olarak doğrulandı. → FINDINGS §19.
+34. Kullanıcı deneme için Claude API hesabı açtı ($5). Koordinatör `hibot/brains/claude_agent.py`'yi yazdı (native tool calling + aynı araçlar ve skill'ler). Kullanıcının `.env`'e `ANTHROPIC_API_KEY` eklemesi bekleniyor.
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.

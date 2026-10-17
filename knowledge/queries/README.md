@@ -77,6 +77,9 @@ SELECT ...
 | `status_step_check` | EU, APAC | is transition FromStatusId -> ToStatusId configured for the tenant? (manual-DB-fix follow-up) |
 | `wo_status_updater_log` | EU | automatic status changes + updater rules |
 | `workcase_tree` | EU, APAC | case with all its work orders, cancellation |
+| `user_type_lookup` | EU, APAC | resolve user-type ids from code (hard-coded UI permission lists) to tenant + translated name; list a tenant's user types (round 2) |
+| `product_labour_setup` | EU, APAC | SKU list + tenant: labour materials, labour price groups, sibling coverage in the same HierarchyId (mirrors dbo.GetSiriusLabours) (round 2) |
+| `wo_detail_material_types` | EU, APAC | work order detail lines by Material.Type (1 labour, 2 part, 3 transport, 4 extra) next to the header costs = what dbo.PricingWorkOrder sums (round 2) |
 | `wo_lines_totals` | EU, APAC | detail lines vs header totals |
 | `wo_discount_log` | EU | manual discount log |
 | `wo_erp_sap` | EU, APAC | ERP / FI / MM documents and errors |

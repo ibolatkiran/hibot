@@ -17,6 +17,9 @@ order that preflight resolved.  Everything goes through the Executor (hibot.db t
   integration_failure WITHOUT a resolved work order           time window ticket-created -24h/+24h (UTC): job_health,
                                                               outbound_queue_backlog, db_errors_recent
 
+  UI gating ids found in the calling screens          tenant_lookup (ticket country) + user_type_lookup (Ids = the ids hard-coded in the UI, TenantId)
+  labour / price / cost tickets with SKU or WO        product_labour_setup (SKUs, tenant) + wo_detail_material_types per resolved WO (<= 2)
+
 Live mode only: in dry-run nothing could be learned and the budget would be burnt.
 """
 from __future__ import annotations
@@ -180,6 +183,22 @@ def format_observation(qid: str, rec: dict) -> str:
         L += _tail(rows, 8, lambda r: _kv(r, ["Source", "Name", "Cnt", "MaxRetry", "FirstAt", "LastAt", "SampleText"], 70))
     elif qid == "db_errors_recent":
         L += ["  " + _kv(r, ["ErrorProcedure", "ErrorNumber", "Occurrences", "FirstSeen", "LastSeen", "SampleMessage"], 70) for r in rows[:6]]
+    elif qid == "user_type_lookup":
+        L += ["  " + _kv(r, ["UserTypeId", "TenantId", "CountryCode", "UserTypeName", "Active", "Service", "InIdList"], 40) for r in rows[:14]]
+    elif qid == "product_labour_setup":
+        L += ["  " + _kv(r, ["SKU", "ProductId", "HierarchyId", "AssignedToTenant", "LabourMaterials", "LabourPriceGroups", "LabourMaterialsAnyTenant",
+                            "PriceGroupsAnyTenant", "HierarchyProductsInTenant", "HierarchyProductsWithLabour"], 30) for r in rows[:6]]
+    elif qid == "wo_detail_material_types":
+        r0 = rows[0]
+        L.append("  header: LabourCost=%s MaterialCost=%s TransportCost=%s ExtraCost=%s" % (
+            r0.get("HeaderLabourCost"), r0.get("HeaderMaterialCost"), r0.get("HeaderTransportCost"), r0.get("HeaderExtraCost")))
+        lines = [r for r in rows if r.get("DetailId") is not None]
+        by: Dict[str, int] = {}
+        for r in lines:
+            k = "Type%s" % r.get("MaterialType") if r.get("MaterialType") is not None else "no-material"
+            by[k] = by.get(k, 0) + 1
+        L.append("  %d detail lines by Material.Type: %s" % (len(lines), ", ".join("%s=%d" % kv for kv in sorted(by.items())) or "none"))
+        L += _tail(lines, 8, lambda r: _kv(r, ["DetailId", "DefectId", "MaterialId", "MaterialType", "MaterialCode", "Quantity", "Price"], 20))
     elif qid == "tenant_lookup":
         L += ["  " + _kv(r, ["TenantId", "TenantName", "CountryCode", "Active", "LanguageCode"], 40) for r in rows[:5]]
     elif qid == "product_sku_lookup":
@@ -208,7 +227,7 @@ def _run(ex: Executor, qid: str, params: Dict[str, Any], why: str, region: str, 
     return rec
 
 
-def run(inc: dict, ex: Executor, pf: Dict[str, Any]) -> Dict[str, Any]:
+def run(inc: dict, ex: Executor, pf: Dict[str, Any], gating: Optional[dict] = None) -> Dict[str, Any]:
     """Run the playbook; returns {"ran", "selected", "text", "ticket_window"}.  Never raises."""
     res: Dict[str, Any] = {"ran": [], "selected": [], "text": "", "ticket_window": None}
     if ex.mode != LIVE:
@@ -244,14 +263,28 @@ def run(inc: dict, ex: Executor, pf: Dict[str, Any]) -> Dict[str, Any]:
             _master_data(inc, ex, region, ran, texts)
         if not wo and inc.get("problem_type") == "integration_failure":
             _integration_window(inc, ex, region, ran, texts, res)
+        elif inc.get("problem_type") == "notification_failure":              # round 2: is the sender job healthy / the queue moving?
+            _integration_window(inc, ex, region, ran, texts, res, qids=("job_health", "outbound_queue_backlog"),
+                                note="notification ticket: is the SMS / e-mail sender job running and the queue moving around the ticket time?")
+        elif is_performance_ticket(inc):
+            _integration_window(inc, ex, region, ran, texts, res, qids=("db_errors_recent", "job_health", "outbound_queue_backlog"),
+                                note="performance / slowness ticket: errors, hung jobs or a growing queue around the ticket time? (empty window = nothing visible in Sirius data)")
         if access.is_access_incident(inc):
             _access(inc, ex, region, ran, texts, res)
+        if gating and gating.get("ids"):
+            _gating_user_types(inc, ex, region, ran, texts, res, gating["ids"], wo)
+        if is_labour_ticket(inc):
+            _labour(inc, ex, region, ran, texts, res, resolved)
     except Exception as e:                                            # noqa: BLE001 - a baseline bug must not kill the run
         texts.append("(baseline aborted: %s: %s)" % (e.__class__.__name__, str(e)[:120]))
     if texts:
         res["text"] = ("## BASELINE EVIDENCE (deterministic playbook, already executed and counted in the query budget; do NOT repeat these queries)\n"
                        + "\n".join(texts))
     return res
+
+
+ADD_RE = re.compile(r"\b(?:add|adding|register|registration|load|create|open(?:ing)?|define|assign|new)\b|\bnot (?:registered|defined|available|found|exist)|missing|"
+                    r"ekle|tanımla|tanimla|aç(?:ılması|ılmas)|acilmasi|yükle|yukle|kayıt|kayit", re.I)
 
 
 def _master_data(inc: dict, ex: Executor, region: str, ran: List[str], texts: List[str]) -> None:
@@ -263,8 +296,14 @@ def _master_data(inc: dict, ex: Executor, region: str, ran: List[str], texts: Li
     rec = _run(ex, "tenant_lookup", {"CountryCode": country}, "baseline: tenant of the ticket country (reporter's country!)", region, ran, texts)
     rows = _rows(rec) if rec and rec.get("executed") else []
     if len(rows) == 1:
-        _run(ex, "product_sku_lookup", {"TenantId": rows[0]["TenantId"], "Sku": sku}, "baseline: does the SKU exist / is it assigned to the tenant?",
-             region, ran, texts)
+        rec2 = _run(ex, "product_sku_lookup", {"TenantId": rows[0]["TenantId"], "Sku": sku}, "baseline: does the SKU exist / is it assigned to the tenant?",
+                    region, ran, texts)
+        found = _rows(rec2) if rec2 and rec2.get("executed") else []
+        if found and ADD_RE.search(ticket_text(inc)):
+            texts.append("(SNAPSHOT CAVEAT: the ticket asks for something to be ADDED / registered / loaded and the SKU exists and is assigned NOW. Tickets are analysed "
+                         "AFTER they were handled, so this is the expected result of the master-data change that fixed the ticket, NOT evidence of user_error. "
+                         "Classify master_data / master_data_change (say the data is present now and that its assignment is most likely what the ticket produced); "
+                         "only if CreateDate/LastProductChange or the ticket text show the SKU was already fully set up for this tenant before the ticket, look for another cause.)")
     else:
         texts.append("[product_sku_lookup] skipped: country %s maps to %d tenants, tenant unknown (ask for it or use tenant_lookup)" % (country, len(rows)))
 
@@ -284,7 +323,16 @@ def ticket_time_window(inc: dict, hours: int = WINDOW_HOURS) -> Optional[Tuple[s
     return ((created - _dt.timedelta(hours=hours)).strftime(f), (created + _dt.timedelta(hours=hours)).strftime(f))
 
 
-def _integration_window(inc: dict, ex: Executor, region: str, ran: List[str], texts: List[str], res: dict) -> None:
+PERF_RE = re.compile(r"\bslow|performance|time[- ]?out|not loading|doesn'?t load|takes (?:too )?long|\bhangs?\b|\bhanging\b|freez|yava[sş]|a[cç]ılm[ai]|donuyor|"
+                     r"gecikme|\bdelayed\b", re.I)
+
+
+def is_performance_ticket(inc: dict) -> bool:
+    return inc.get("problem_type") == "performance_report" or bool(PERF_RE.search(ticket_text(inc)))
+
+
+def _integration_window(inc: dict, ex: Executor, region: str, ran: List[str], texts: List[str], res: dict,
+                        qids=("job_health", "outbound_queue_backlog", "db_errors_recent"), note: str = "") -> None:
     w = ticket_time_window(inc)
     if w is None:
         texts.append("[integration window] skipped: ticket creation time unknown")
@@ -293,10 +341,13 @@ def _integration_window(inc: dict, ex: Executor, region: str, ran: List[str], te
     res["window"] = {"from_utc": w[0], "to_utc": w[1]}
     texts.append("(No work order is known: time-window evidence around the ticket creation, %s .. %s UTC. These logs are platform-wide, "
                  "not tenant scoped; a problem visible here only SUGGESTS the cause - say so.)" % w)
-    for qid, why in (("job_health", "baseline: did the background jobs run / fail around the ticket time?"),
-                     ("outbound_queue_backlog", "baseline: outbound queue / post errors around the ticket time"),
-                     ("db_errors_recent", "baseline: database errors around the ticket time")):
-        _run(ex, qid, dict(params), why, region, ran, texts)
+    whys = {"job_health": "baseline: did the background jobs run / fail around the ticket time?",
+            "outbound_queue_backlog": "baseline: outbound queue / post errors around the ticket time",
+            "db_errors_recent": "baseline: database errors around the ticket time"}
+    if note:
+        texts.append("(" + note + ")")
+    for qid in qids:
+        _run(ex, qid, dict(params), whys[qid], region, ran, texts)
 
 
 # ----------------------------------------------------------------------- access requests
@@ -321,3 +372,56 @@ def _access(inc: dict, ex: Executor, region: str, ran: List[str], texts: List[st
     if found_any and re.fullmatch(r"[A-Z]{2}", country):
         _run(ex, "tenant_lookup", {"CountryCode": country}, "baseline: tenants of the ticket country (to compare with the user's memberships)",
              region, ran, texts)
+
+
+# ----------------------------------------------------------------------- UI gating: who is in the hard-coded list?
+
+def _ticket_tenant(inc: dict, ex: Executor, region: str, ran: List[str], texts: List[str], wo: Optional[dict]) -> Optional[int]:
+    """TenantId of the resolved work order, else the single tenant of the ticket country (reporter's country: a weaker guess)."""
+    if wo and wo.get("TenantId") is not None:
+        return int(wo["TenantId"])
+    country = str(inc.get("country") or "").upper()
+    if not re.fullmatch(r"[A-Z]{2}", country):
+        return None
+    rec = _run(ex, "tenant_lookup", {"CountryCode": country}, "baseline: tenant of the ticket country (reporter's country!)", region, ran, texts)
+    rows = _rows(rec) if rec and rec.get("executed") else []
+    return int(rows[0]["TenantId"]) if len(rows) == 1 else None
+
+
+def _gating_user_types(inc: dict, ex: Executor, region: str, ran: List[str], texts: List[str], res: dict, ids: List[int], wo: Optional[dict]) -> None:
+    tenant = _ticket_tenant(inc, ex, region, ran, texts, wo)
+    params: Dict[str, Any] = {"Ids": ",".join(str(i) for i in ids[:12])}
+    if tenant is not None:
+        params["TenantId"] = tenant
+    res["gating"] = {"ids": ids[:12], "tenant": tenant}
+    _run(ex, "user_type_lookup", params, "baseline: which tenants / roles are the user-type ids hard-coded in the UI, and which user types does the ticket tenant have?",
+         region, ran, texts)
+
+
+# ----------------------------------------------------------------------- labour / price / cost tickets
+
+LABOUR_RE = re.compile(r"labou?r|işçilik|iscilik|workmanship|tariff|tarife|price list|fiyat listesi|\bprice\b|\bcost\b|maliyet", re.I)
+
+
+def is_labour_ticket(inc: dict) -> bool:
+    ents = inc.get("entities") or {}
+    return bool(LABOUR_RE.search(ticket_text(inc))) and bool(ents.get("sku_codes") or ents.get("work_order_ids_strong") or ents.get("work_order_ids"))
+
+
+def _labour(inc: dict, ex: Executor, region: str, ran: List[str], texts: List[str], res: dict, resolved: List[dict]) -> None:
+    ents = inc.get("entities") or {}
+    wo = resolved[0] if resolved else None
+    seen, wos = set(), []
+    for r in resolved:
+        if r.get("WorkOrderId") not in seen:
+            seen.add(r.get("WorkOrderId"))
+            wos.append(r)
+    for r in wos[:2]:
+        _run(ex, "wo_detail_material_types", {"TenantId": r["TenantId"], "WorkOrderId": r["WorkOrderId"]},
+             "baseline: labour/price ticket - which detail lines (Material.Type) does the work order have? (dbo.PricingWorkOrder sums them)", region, ran, texts)
+    skus = [str(x) for x in (ents.get("sku_codes") or [])][:6]
+    tenant = _ticket_tenant(inc, ex, region, ran, texts, wo) if skus else None
+    if skus and tenant is not None:
+        res["labour"] = {"skus": skus, "tenant": tenant}
+        _run(ex, "product_labour_setup", {"TenantId": tenant, "Skus": ",".join(skus)},
+             "baseline: labour / price-group setup of the product(s) for the tenant, and of the sibling products in the same hierarchy", region, ran, texts)

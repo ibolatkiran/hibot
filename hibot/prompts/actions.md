@@ -25,8 +25,8 @@
 ```
 {"action":"final_report",
  "summary":"1-3 cumle Turkce ozet",
- "root_cause_type":"config|code_defect|master_data|integration|user_error|access|data_issue|unknown",
- "resolution_action":"data_fix|config_change|code_change|master_data_change|explain_to_user|grant_access|escalate_other_system|none|unknown",
+ "root_cause_type":"config|code_defect|master_data|integration|user_error|access|data_issue|change_request|unknown",
+ "resolution_action":"data_fix|config_change|code_change|master_data_change|explain_to_user|grant_access|escalate_other_system|route_to_backlog|none|unknown",
  "root_cause":"Turkce kok neden; kanit yoksa 'belirsiz' yaz",
  "confidence":0.0,
  "evidence":[{"type":"query|code|similar_case|card","ref":"wo_history_function | path/File.cs:123 | SM-1234567 | card_id","finding":"gorulen somut sonuc"}],

@@ -13,15 +13,18 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 OUT = ROOT / "knowledge" / "eval"
 TICKETS = ROOT / "knowledge" / "incidents" / "tickets_enriched.json"
 WINDOWS = ROOT / "knowledge" / "learning" / "ticket_windows.jsonl"
 
-DEV = ["SM-2139009", "SM-2139002", "SM-2122480", "SM-2126600", "SM-1777386"]
+DEV = ["SM-2139009", "SM-2139002", "SM-2122480", "SM-2126600", "SM-1777386", "SM-2172385", "SM-2169006"]   # last two: round 2 (inbox XML tickets)
 
 S_FOOT, S_NOCHG = "status_footprint", "status_nochange"
 S_FUNC, S_INT, S_MD, S_ACC, S_NOT, S_PERF = ("functional_defect", "integration_failure", "master_data_request",
                                             "access_request", "notification_failure", "performance_report")
+S_GATE = "capability_gating"                               # round 2: "field not editable / feature missing for my role"
 
 
 def M(*w):
@@ -41,6 +44,11 @@ LABELS = {
     "SM-2139002": (S_FOOT, "data_correction", "medium", "footprint: manual fix 329->314, transition not in StatusStep", "same cancel request as sibling ticket", []),
     "SM-2126600": (S_FOOT, "user_error", "high", "D17: T70 2271->2257 closed on purpose; devs forced it by hand", "asks status Transfer on a financed WO; blocked by design", []),
     "SM-2122480": (S_NOCHG, "integration", "low", "no change in window; comment only 'solved'; text claims Atlas mismatch", "status differs between Sirius and Atlas", [M("atlas")]),
+    # ---- round 2 dev tickets: not in tickets_enriched.json, read from docs/jira_export/inbox/<KEY>.xml (labels = coordinator diagnosis, FINDINGS 17/18)
+    "SM-2172385": (S_GATE, "change_request", "high", "coordinator diagnosis (FINDINGS 17): Partner Summary.js hard-codes repairDateEditUserTypeIds [1218,1233]; Morocco service partner (920) not in the list",
+                   "asks that the repair date can be corrected; edit right is a hard-coded user-type list", [Q("user_type_lookup"), M("repairDateEditUserTypeIds", "1233", "user type")]),
+    "SM-2169006": (S_MD, "master_data", "high", "coordinator diagnosis (FINDINGS 18): no Type-1 lines on the WOs; SKUs have no labour materials / price groups in tenant 59, hierarchy 121 never set up",
+                   "labour charge not showing on three Bangladesh WOs; labour setup of the product category missing", [Q("product_labour_setup"), M("hierarchy", "labour")]),
     "SM-1777386": (S_FUNC, "code_defect", "low", "Jira Won't Do: closed as related change request", "WO history shows one record after reassignment (APAC)", [M("history")]),
     # ---- status / data_correction, high footprint
     "SM-2143299": (S_FOOT, "data_correction", "medium", "footprint: manual fix 692->695, transition not in StatusStep", "asks to reject a WO; status forced in DB", []),
@@ -93,6 +101,10 @@ LABELS = {
 }
 
 
+INBOX_KEYS = ("SM-2172385", "SM-2169006")
+TENANT_OVERRIDE = {"SM-2169006": 59}                       # from the coordinator diagnosis (WOs are tenant 59, Bangladesh)
+
+
 def _int(v):
     try:
         return int(v)
@@ -102,6 +114,10 @@ def _int(v):
 
 def build():
     tickets = {t["key"]: t for t in json.loads(TICKETS.read_text(encoding="utf-8"))["tickets"]}
+    for k in INBOX_KEYS:                                   # not in the dataset: parsed from the Jira XML inbox
+        if k not in tickets:
+            from hibot.agent import intake
+            tickets[k] = intake.build_incident(k, None)
     wins = {}
     if WINDOWS.exists():
         for line in WINDOWS.read_text(encoding="utf-8").splitlines():
@@ -114,9 +130,11 @@ def build():
         w = wins.get(key) if wins.get(key, {}).get("status") == "ok" else None
         wos = list((w or {}).get("wos", []))
         wo_ids = [o["work_order_id"] for o in wos] or [_int(x) for x in (t.get("entities") or {}).get("work_order_ids_strong") or []]
-        wo_ids = [x for x in wo_ids if x]
-        tenant = _int(wos[0]["tenant_id"]) if wos else None
+        wo_ids = [_int(x) for x in wo_ids if _int(x)]
+        tenant = _int(wos[0]["tenant_id"]) if wos else TENANT_OVERRIDE.get(key)
         findings = []
+        if not wos and key in TENANT_OVERRIDE and wo_ids:
+            findings.append({"type": "wo_resolved", "work_order_id": wo_ids[0], "tenant_id": tenant})
         if wos:
             findings.append({"type": "wo_resolved", "work_order_id": wos[0]["work_order_id"], "tenant_id": tenant})
             for o in wos:
@@ -145,7 +163,7 @@ def build():
         })
         notes.append("- %s [%s/%s, %s] %s -> %s: %s" % (key, split, stratum, conf, t.get("resolution"), cls, basis))
     meta = {"version": 1, "n": len(items), "label_kind": "silver (heuristic; not developer-verified)",
-            "classes": ["code_defect", "master_data", "access", "data_correction", "integration", "config", "user_error", "unknown"]}
+            "classes": ["code_defect", "master_data", "access", "data_correction", "integration", "config", "user_error", "change_request", "unknown"]}
     return {"meta": meta, "tickets": items}, notes
 
 

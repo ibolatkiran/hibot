@@ -67,6 +67,8 @@ def axes_for(item: dict, facts: Dict[Tuple[str, str, str], bool]) -> Tuple[str, 
         return "config", "config_change", "R6"
     if cl == "unknown":
         return "unknown", "unknown", "R7"
+    if cl == "change_request":                       # round 2 rule R9 (label_axes_rules.md); only new tickets carry this class
+        return "change_request", "route_to_backlog", "R9"
     if cl == "data_correction":
         manual = any(f.get("type") == "manual_fix_detected" for f in item.get("expected_findings") or [])
         ta = transition_allowed(item, facts) if manual else None

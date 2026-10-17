@@ -20,7 +20,7 @@ from hibot.db import safe_sql
 from hibot.db.runner import ENV_VARS, QueryRunner
 from hibot.db.templates import TemplateError, TemplateRegistry
 
-from . import config, safety
+from . import config, safety, ui_gating
 from .code_context import CodeContext
 
 LIVE, DRY = "live", "dry-run"
@@ -95,6 +95,9 @@ class Executor:
         self.query_count = 0
         self.adhoc_count = 0
         self._described: set = set()
+        self.gating_done: set = set()          # endpoints whose UI gating is already in the case file
+        self.known_sources: List[str] = []       # sources the case file / inspections pointed at (source-reading guard)
+        self.sources_read = 0                    # successful read_source actions
 
     # ------------------------------------------------------------- dispatch
     def execute(self, action: dict) -> dict:
@@ -222,14 +225,42 @@ class Executor:
         head = "[inspect_code %s: %s]" % (t["kind"], t["value"])
         if not res.get("ok"):
             return {"ok": False, "text": "%s FAILED: %s" % (head, res.get("error"))}
+        self._note_sources(res.get("result"))
+        gating = ""
+        if t["kind"] == "endpoint" and getattr(self.code, "graph", None) is not None:       # round 2: who may use it? (UI gating of the callers)
+            try:
+                g = ui_gating.analyze(self.code.graph, [t["value"]], max_endpoints=1)
+            except Exception:                                                                # noqa: BLE001
+                g = {}
+            if g.get("text") and not (set(g.get("endpoints") or []) & self.gating_done):
+                gating = g["text"] + "\n"
+                self.gating_done.update(g.get("endpoints") or [])
         body = json.dumps(res.get("result"), ensure_ascii=False, default=str, separators=(",", ":"))
-        return {"ok": True, "text": "%s (source: %s)\n%s" % (head, res.get("backend"), body)}
+        return {"ok": True, "text": "%s (source: %s)\n%s%s" % (head, res.get("backend"), gating, body)}
+
+    def _note_sources(self, result: Any) -> None:
+        """Remember stored-procedure / screen files an inspection pointed at (used by the 'read the source before giving up' guard)."""
+        def walk(o: Any, depth: int = 0) -> None:
+            if depth > 6 or len(self.known_sources) > 40:
+                return
+            if isinstance(o, dict):
+                f = o.get("file")
+                if isinstance(f, str) and re.search(r"\.(sql|js|cs)$", f, re.I) and f not in self.known_sources and (
+                        "StoredProcedures" in f or "/views/" in f or "\\views\\" in f or f.endswith(".sql")):
+                    self.known_sources.append(f)
+                for v in o.values():
+                    walk(v, depth + 1)
+            elif isinstance(o, list):
+                for v in o[:30]:
+                    walk(v, depth + 1)
+        walk(result)
 
     def _read_source(self, a: dict) -> dict:
         res = safety.read_source(a["path"], a.get("start_line"), a.get("end_line"), self.budget.max_source_lines)
         head = "[read_source %s]" % a["path"]
         if not res["ok"]:
             return {"ok": False, "text": "%s REJECTED: %s" % (head, res["error"])}
+        self.sources_read += 1
         return {"ok": True, "text": "%s lines %d-%d of %d%s\n%s" % (
             head, res["start_line"], res["end_line"], res["total_lines"],
             " (range capped)" if res["truncated"] else "", res["text"])}

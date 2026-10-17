@@ -123,7 +123,7 @@ def main(argv=None) -> int:
     cd.add_argument("--root-cause", dest="root_cause", help="confirm: override the root cause")
     cd.add_argument("--fix-step", dest="fix_step", action="append", help="confirm: replace fix steps (repeat the flag per step)")
     cd.add_argument("--classification", choices=["code_defect", "master_data", "access", "data_correction", "integration", "config",
-                                                  "user_error", "unknown"], help="confirm: set the classification")
+                                                  "user_error", "change_request", "unknown"], help="confirm: set the classification")
     cd.add_argument("--title", help="confirm: override the title")
     cd.set_defaults(fn=cmd_cards)
     a = p.parse_args(argv)

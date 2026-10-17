@@ -13,7 +13,7 @@ Caps (applied in this order, the lowest wins):
 
 "Supporting" evidence = evidence item of type query, status `executed`, whose query returned rows (row_count > 0), except
 context-only templates (wo_locate, tenant_lookup, wo_header: they identify the order, they do not show a cause).  For templates
-where an EMPTY result IS the finding (user_access_lookup: user code unknown; product_sku_lookup: SKU missing) 0 rows count too.
+where an EMPTY result IS the finding (user_access_lookup: user code unknown; product_sku_lookup / product_labour_setup: SKU missing) 0 rows count too.
 The deterministic ticket-window evidence counts only when a manual fix is suspected.  A card counts when its verification
 verdict is `supports`.
 """
@@ -25,7 +25,7 @@ NO_QUERY_CAP = 0.5
 UNSUPPORTED_CAP = 0.6
 WEAK_CAP = 0.8
 CONTEXT_ONLY = frozenset({"wo_locate", "tenant_lookup", "wo_header"})
-EMPTY_IS_FINDING = frozenset({"user_access_lookup", "product_sku_lookup"})
+EMPTY_IS_FINDING = frozenset({"user_access_lookup", "product_sku_lookup", "product_labour_setup"})
 
 
 def supporting_evidence(rep: dict, queries: List[dict]) -> Dict[str, Any]:

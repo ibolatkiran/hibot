@@ -8,7 +8,8 @@ from tools.eval import score as S
 ROOT = Path(__file__).resolve().parents[1]
 EVAL_SET = ROOT / "knowledge" / "eval" / "eval_set.json"
 TICKETS = ROOT / "knowledge" / "incidents" / "tickets_enriched.json"
-DEV = {"SM-2139009", "SM-2139002", "SM-2122480", "SM-2126600", "SM-1777386"}
+DEV = {"SM-2139009", "SM-2139002", "SM-2122480", "SM-2126600", "SM-1777386", "SM-2172385", "SM-2169006"}
+INBOX_ONLY = {"SM-2172385", "SM-2169006"}     # round 2: parsed from docs/jira_export/inbox/<KEY>.xml, not in tickets_enriched.json
 
 
 def item(**kw):
@@ -126,7 +127,8 @@ class TestEvalSet(unittest.TestCase):
         keys = [i["key"] for i in self.items]
         self.assertEqual(len(keys), len(set(keys)))
         for k in keys:
-            self.assertIn(k, self.tickets)
+            if k not in INBOX_ONLY:
+                self.assertIn(k, self.tickets)
 
     def test_schema(self):
         for i in self.items:

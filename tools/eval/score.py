@@ -19,7 +19,7 @@ from typing import Any, Dict, Iterable, List, Optional
 ROOT = Path(__file__).resolve().parents[2]
 EVAL_DIR = ROOT / "knowledge" / "eval"
 
-CLASSES = ["code_defect", "master_data", "access", "data_correction", "integration", "config", "user_error", "unknown"]
+CLASSES = ["code_defect", "master_data", "access", "data_correction", "integration", "config", "user_error", "change_request", "unknown"]
 # Lenient equivalence (symmetric, NOT transitive): a status gap can be called a data fix or a missing configuration/setup row,
 # and a missing product/tariff row is master data or configuration.  Anything else must match exactly.
 LENIENT_PAIRS = {frozenset(p) for p in (("config", "data_correction"), ("config", "master_data"))}
@@ -32,7 +32,8 @@ LEGACY_TO_AXES = {
     "code_defect": ("code_defect", "code_change"), "master_data": ("master_data", "master_data_change"),
     "access": ("access", "grant_access"), "data_correction": ("data_issue", "data_fix"),
     "integration": ("integration", "escalate_other_system"), "config": ("config", "config_change"),
-    "user_error": ("user_error", "explain_to_user"), "unknown": ("unknown", "unknown"),
+    "user_error": ("user_error", "explain_to_user"), "change_request": ("change_request", "route_to_backlog"),
+    "unknown": ("unknown", "unknown"),
 }
 
 

@@ -12,6 +12,7 @@ CLASS_TR = {
     "data_correction": "Veri düzeltme (data_correction)",
     "integration": "Entegrasyon (integration)",
     "config": "Konfigürasyon (config)",
+    "change_request": "Değişiklik talebi (change_request)",
     "user_error": "Kullanıcı hatası / tasarım gereği (user_error)",
     "unknown": "Belirsiz (unknown)",
 }

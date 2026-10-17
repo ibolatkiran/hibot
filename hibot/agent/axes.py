@@ -4,13 +4,25 @@ Why: the old single label mixed WHY it broke (root cause) with WHAT was done abo
 Catalog.StatusStep is a `config` root cause whose resolution was a `data_fix` by a developer; calling it "config" or
 "data_correction" were both defensible, which made ~3 of 7 confidently-wrong answers of the baseline pure taxonomy noise.
 
-  root_cause_type    config | code_defect | master_data | integration | user_error | access | data_issue | unknown
+  root_cause_type    config | code_defect | master_data | integration | user_error | access | data_issue | change_request | unknown
   resolution_action  data_fix | config_change | code_change | master_data_change | explain_to_user | grant_access |
-                     escalate_other_system | none | unknown
+                     escalate_other_system | route_to_backlog | none | unknown
+
+Round 2 adds the pair  root_cause_type `change_request`  /  resolution_action `route_to_backlog`:  the system behaves exactly as coded
+(a feature or permission scope is deliberately limited, e.g. a UI screen hard-codes the user-type ids that may edit a field) and the
+reporter asks for a DIFFERENT behaviour.  Nothing is broken, nothing in the DB is wrong; a product / business decision plus a code or
+configuration change is needed, so the ticket goes to the backlog.  Guidance for permission-scope tickets:
+  * a hard-coded list in code (or any gate that needs a product decision) that excludes the reporter's role/tenant
+        -> change_request / route_to_backlog   (name the file:line, the allowed ids and the options: workaround by an allowed role,
+           add the role after business approval, move the list to configuration)
+  * ONE user is missing a role / tenant membership / employee link that the application's own configuration grants others
+        -> access / grant_access
+  * a tenant/system configuration row (not code) is missing or restrictive -> config / config_change
+  * the code is wrong for what it is documented to do -> code_defect / code_change
 
 Legacy `classification` (kept for cards, scoring of old runs, tests) is DERIVED, never chosen independently:
 
-  1. root_cause_type in {master_data, access, integration, code_defect} -> the same name
+  1. root_cause_type in {master_data, access, integration, code_defect, change_request} -> the same name
   2. resolution_action == data_fix (any other root cause: config, data_issue, unknown, user_error) -> data_correction
   3. config -> config;  user_error -> user_error;  data_issue -> data_correction;  unknown -> unknown
 
@@ -20,15 +32,16 @@ and, for old reports / cards that only have the legacy label, the axes are deriv
   access -> (access, grant_access)                 data_correction -> (data_issue, data_fix)
   integration -> (integration, escalate_other_system)   config -> (config, config_change)
   user_error -> (user_error, explain_to_user)      unknown -> (unknown, unknown)
+  change_request -> (change_request, route_to_backlog)
 """
 from __future__ import annotations
 
 from typing import Any, Dict, Optional, Tuple
 
-ROOT_CAUSE_TYPES = ("config", "code_defect", "master_data", "integration", "user_error", "access", "data_issue", "unknown")
+ROOT_CAUSE_TYPES = ("config", "code_defect", "master_data", "integration", "user_error", "access", "data_issue", "change_request", "unknown")
 RESOLUTION_ACTIONS = ("data_fix", "config_change", "code_change", "master_data_change", "explain_to_user", "grant_access",
-                      "escalate_other_system", "none", "unknown")
-LEGACY = ("code_defect", "master_data", "access", "data_correction", "integration", "config", "user_error", "unknown")
+                      "escalate_other_system", "route_to_backlog", "none", "unknown")
+LEGACY = ("code_defect", "master_data", "access", "data_correction", "integration", "config", "user_error", "change_request", "unknown")
 
 LEGACY_TO_AXES: Dict[str, Tuple[str, str]] = {
     "code_defect": ("code_defect", "code_change"),
@@ -38,19 +51,21 @@ LEGACY_TO_AXES: Dict[str, Tuple[str, str]] = {
     "integration": ("integration", "escalate_other_system"),
     "config": ("config", "config_change"),
     "user_error": ("user_error", "explain_to_user"),
+    "change_request": ("change_request", "route_to_backlog"),
     "unknown": ("unknown", "unknown"),
 }
 DEFAULT_ACTION = {v[0]: v[1] for v in LEGACY_TO_AXES.values()}
-_DIRECT = ("master_data", "access", "integration", "code_defect")
+_DIRECT = ("master_data", "access", "integration", "code_defect", "change_request")
 
 ROOT_TR = {
     "config": "Konfigürasyon", "code_defect": "Kod hatası", "master_data": "Ana veri", "integration": "Entegrasyon",
-    "user_error": "Kullanıcı hatası / tasarım gereği", "access": "Yetki / erişim", "data_issue": "Veri sorunu", "unknown": "Belirsiz",
+    "user_error": "Kullanıcı hatası / tasarım gereği", "access": "Yetki / erişim", "data_issue": "Veri sorunu", "change_request": "Değişiklik talebi (mevcut davranış tasarım gereği)",
+    "unknown": "Belirsiz",
 }
 ACTION_TR = {
     "data_fix": "Veri düzeltme (DB'de elle)", "config_change": "Konfigürasyon değişikliği", "code_change": "Kod değişikliği",
     "master_data_change": "Ana veri değişikliği", "explain_to_user": "Kullanıcıya açıklama", "grant_access": "Yetki verilmesi",
-    "escalate_other_system": "Başka sisteme (SAP/Atlas vb.) yönlendirme", "none": "Aksiyon gerekmiyor", "unknown": "Belirsiz",
+    "escalate_other_system": "Başka sisteme (SAP/Atlas vb.) yönlendirme", "route_to_backlog": "Ürün backlog'una alınmalı (iş birimi kararı)", "none": "Aksiyon gerekmiyor", "unknown": "Belirsiz",
 }
 
 

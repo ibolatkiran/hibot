@@ -604,6 +604,51 @@ Run `20261016-213420-SM-2169006-fa38`. HiBot sonucu `unknown` / 0,50. 5 sorgu ç
 3. "unknown, kod mu konfig mü bilinmiyor" diye durmadan önce **SP gövdesi okunmalı** (`read_source` SP için çalışıyor).
 4. Tekrar kalıbı: "Missing labour in Sirius <ülke>" (ör. SM-2088913 Bosna) → **kart adayı:** "Yeni SKU veya kategori için işçilik kurulumu yok → LabourCost 0".
 
+## 19. Tur 2 (round2_20261017) ve Claude deney altyapısı, 2026-10-17
+
+Karşılaştırma: `knowledge/eval/compare_round1_vs_round2.md`.
+
+**Tur 2'de eklenenler**
+- Yardımcılar: `ui_gating.py`, `provenance.py`
+- Şablonlar: `user_type_lookup`, `product_labour_setup`, `wo_detail_material_types`
+- Sınıflar: `change_request` / `route_to_backlog` (etiket kuralı R9)
+- Kaynak koruması: SP veya ekran okunmadan "unknown" denmesi bir kez geri çevriliyor
+- Bildirim ve performans için zaman penceresi temel setleri
+
+**Dev sonuçları**
+- SM-2172385 → change_request (`repairDateEditUserTypeIds` ve TODO bulundu, ama kapsamı biraz yanlış okudu: 920'nin dışarıda kalmasını değil "Fas eksik" dedi).
+- SM-2169006 → master_data (0 işçilik, 0 fiyat grubu; hierarchy 121'in 11 ürününün hiçbirinde kurulum yok).
+- Dev seti (7 ticket): %100.
+
+**Ana veri gerilemesinin sebebi:** analiz ticket ele alındıktan sonra yapılıyor, SKU o arada eklenmiş oluyor. LLM bu yüzden "zaten var, kullanıcı hatası" diyordu. Anlık görüntü uyarısı eklendi; ana veri isabeti %40 → %80.
+
+**Test seti** (güvenilir etiket n=30)
+
+| Metrik | Baseline | Tur 1 | Tur 2 |
+|---|---|---|---|
+| Emin ama yanlış (eski / rct) | 23% / 17% | 3% / 7% | 3% / 7% |
+| Kesin / esnek (eski etiket) | 40% / 50% | 53% / 53% | 53% / 53% |
+| Kök neden türü (rct) | 50% | 57% | 53% |
+| Yapılması gereken | 47% | 53% | 63% |
+| İki eksen birlikte | 37% | 47% | 50% |
+| Bulgu isabeti | 92% | 90% | 91% |
+| 0,7–1,0 güvende isabet | 50% | 86% (n=7) | 90% (n=10) |
+
+- Gruplar: ana veri %80, yetki %100, statü izi %80, kod hatası %60.
+- ⚠️ **Entegrasyon %50 → %0** (muhtemelen büyüyen prompt ve 16 çalıştırmada devreye giren erken durma koruması). Bildirim ve performans hâlâ %0.
+
+**Değerlendirme**
+- Genel isabet yerinde sayıyor.
+- Ders bazlı yamalar (her vaka için ayrı modül) doygunluğa ulaştı. **D20 yönünün (genel araçlar + skill'ler + güçlü beyin) gerekçesi bu.**
+
+**Claude deneyi** (`hibot/brains/claude_agent.py`)
+- Native tool calling ile aynı 18 araç + `read_skill`.
+- Sistem prompt'unda `investigation_protocol` + skill dizini.
+- Model `claude-opus-5-5` (varsayılan; `--model claude-sonnet-5-5` ile değiştirilebilir), effort high, prompt caching.
+- Server-side fallback (`fallbacks: "default"`).
+- Bütçe: `--max-usd` (varsayılan $1) ve `--max-steps` (30); bütçenin %85'inde araçsız final rapor zorlanıyor.
+- Kullanıcı deneme için kişisel bir Claude API hesabı açtı ($5 kredi). **Veri uyarısı yapıldı:** ticket metni ve maskeli sorgu sonuçları Anthropic API'ye gidiyor.
+
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
 Önyüzün çağırdığı ama backend'de karşılığı olmayan **109 benzersiz çağrı** var, liste: `knowledge/codemap/trace_index.json` → `unmatched_frontend_calls`. Örnekler:

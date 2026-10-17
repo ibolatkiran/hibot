@@ -43,3 +43,28 @@ pessimistic by construction; root_cause_type is the fair axis to compare.
 ## Derivation of the legacy label from the axes (new reports)
 root_cause_type in {master_data, access, integration, code_defect} -> same name; otherwise resolution_action = data_fix -> data_correction;
 otherwise config -> config, user_error -> user_error, data_issue -> data_correction, unknown -> unknown.
+
+---
+
+# Round 2 addition (2026-10-17) - written BEFORE re-scoring baseline / round 1 / round 2
+
+New classes (taxonomy extension, `hibot/agent/axes.py`):
+* root_cause_type `change_request`: the system works as coded; the reporter asks for different behaviour (a feature or permission scope that is
+  deliberately limited, typically a hard-coded list in code). Nothing is broken and no data is wrong.
+* resolution_action `route_to_backlog`: the ticket needs a product / business decision plus a code or configuration change.
+* Legacy `change_request` (derived: root_cause_type change_request -> same name; legacy -> axes: change_request -> (change_request, route_to_backlog)).
+
+| id | condition | root_cause_type | resolution_action |
+|---|---|---|---|
+| R9 | expected_classification = change_request (only tickets labelled by a coordinator diagnosis that found a hard-coded / by-design scope limit; none of the 45 existing tickets) | change_request | route_to_backlog |
+
+Guidance for permission-scope tickets (also in the system prompt): a hard-coded list in code that excludes the reporter's role/tenant ->
+change_request / route_to_backlog; ONE user missing a role/tenant/employee link the application would grant -> access / grant_access;
+a tenant/system configuration row missing -> config / config_change; code wrong against its own documented behaviour -> code_defect / code_change.
+
+Existing labels are NOT changed: no mechanical rule maps any of the 45 round-1 tickets to `change_request` (R1-R8 outcomes stay as they were; the add_axes
+output for them is identical to round 1, verified by diff). Two new DEV tickets are appended from the inbox XML with coordinator diagnoses
+(FINDINGS 17 / 18): SM-2172385 -> expected_classification `change_request` (R9), SM-2169006 -> `master_data` (R1, expected tenant 59). They are `dev`
+(never in the blind `test` split), stratum `capability_gating` / `master_data_request`.
+Scorer: `tools/eval/score.py` knows the new class and maps legacy reports with `LEGACY_TO_AXES` (unchanged for old classes, so baseline and round 1 re-score identically
+except for ticket sets that did not change).

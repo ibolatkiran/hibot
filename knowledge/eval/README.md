@@ -1,6 +1,6 @@
 # HiBot evaluation set and harness
 
-Silver-label regression set: 45 Sirius EU/CIS tickets (40 `test`, 5 `dev`). Labels are heuristic (footprint in the DB, Jira resolution,
+Silver-label regression set: 47 Sirius EU/CIS tickets (40 `test`, 7 `dev`; the two round-2 dev tickets SM-2172385 / SM-2169006 come from the Jira XML inbox and carry coordinator diagnoses). Labels are heuristic (footprint in the DB, Jira resolution,
 comments), NOT developer-verified; `label_confidence` says how far to trust each one and `needs_human_review` marks the low ones.
 
 | file | content |
@@ -9,7 +9,7 @@ comments), NOT developer-verified; `label_confidence` says how far to trust each
 | `labeling_notes.md` | one line per ticket: why the label |
 | `results_<tag>.md/.json` | scoring output of a run (`tools/eval/score.py`) |
 
-Hold-out: SM-2139009, SM-2139002, SM-2122480, SM-2126600, SM-1777386 were used while developing and form the `dev` split.
+Hold-out: SM-2139009, SM-2139002, SM-2122480, SM-2126600, SM-1777386 (+ round 2: SM-2172385, SM-2169006) were used while developing and form the `dev` split.
 Never tune prompts/cards on `test` tickets (cards created from `test` tickets would leak labels).
 
 ## eval_set.json ticket

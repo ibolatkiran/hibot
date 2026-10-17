@@ -1,7 +1,7 @@
 {
  "meta": {
   "version": 1,
-  "n": 45,
+  "n": 47,
   "label_kind": "silver (heuristic; not developer-verified)",
   "classes": [
    "code_defect",
@@ -11,6 +11,7 @@
    "integration",
    "config",
    "user_error",
+   "change_request",
    "unknown"
   ],
   "axes_rules": "knowledge/eval/label_axes_rules.md"
@@ -162,6 +163,77 @@
    "expected_root_cause_type": "integration",
    "expected_resolution_action": "escalate_other_system",
    "axes_rule": "R5a"
+  },
+  {
+   "key": "SM-2172385",
+   "split": "dev",
+   "stratum": "capability_gating",
+   "region": "EU",
+   "problem_type": "data_correction",
+   "app": null,
+   "expected_work_order_ids": [],
+   "expected_tenant_id": null,
+   "expected_classification": "change_request",
+   "label_confidence": "high",
+   "label_basis": "coordinator diagnosis (FINDINGS 17): Partner Summary.js hard-codes repairDateEditUserTypeIds [1218,1233]; Morocco service partner (920) not in the list",
+   "expected_findings": [
+    {
+     "type": "query_used",
+     "query_id": "user_type_lookup"
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "repairDateEditUserTypeIds",
+      "1233",
+      "user type"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "asks that the repair date can be corrected; edit right is a hard-coded user-type list",
+   "expected_root_cause_type": "change_request",
+   "expected_resolution_action": "route_to_backlog",
+   "axes_rule": "R9"
+  },
+  {
+   "key": "SM-2169006",
+   "split": "dev",
+   "stratum": "master_data_request",
+   "region": "EU",
+   "problem_type": "master_data_request",
+   "app": null,
+   "expected_work_order_ids": [
+    25947184,
+    25947198
+   ],
+   "expected_tenant_id": 59,
+   "expected_classification": "master_data",
+   "label_confidence": "high",
+   "label_basis": "coordinator diagnosis (FINDINGS 18): no Type-1 lines on the WOs; SKUs have no labour materials / price groups in tenant 59, hierarchy 121 never set up",
+   "expected_findings": [
+    {
+     "type": "wo_resolved",
+     "work_order_id": 25947184,
+     "tenant_id": 59
+    },
+    {
+     "type": "query_used",
+     "query_id": "product_labour_setup"
+    },
+    {
+     "type": "mentions",
+     "any": [
+      "hierarchy",
+      "labour"
+     ]
+    }
+   ],
+   "needs_human_review": false,
+   "note": "labour charge not showing on three Bangladesh WOs; labour setup of the product category missing",
+   "expected_root_cause_type": "master_data",
+   "expected_resolution_action": "master_data_change",
+   "axes_rule": "R1"
   },
   {
    "key": "SM-1777386",

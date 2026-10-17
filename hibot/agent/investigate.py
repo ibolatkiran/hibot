@@ -25,7 +25,7 @@ NO_QUERY_CONF_CAP = calibration.NO_QUERY_CAP
 class Investigation:
     def __init__(self, llm: LLMClient, incident: dict, matches: List[dict], code_ctx: List[dict], executor: Executor,
                  *, budget: Optional[config.Budget] = None, system_prompt: Optional[str] = None,
-                 on_step: Optional[Callable[[dict], None]] = None, resolved_text: str = "", baseline_text: str = "", card_text: str = ""):
+                 on_step: Optional[Callable[[dict], None]] = None, resolved_text: str = "", baseline_text: str = "", card_text: str = "", extra_text: str = ""):
         self.llm, self.inc, self.matches, self.executor = llm, incident, matches, executor
         self.budget = budget or executor.budget
         self.system = system_prompt or prompts.system_prompt()
@@ -35,10 +35,13 @@ class Investigation:
         self.forced = False
         self.warnings: List[str] = []
         self.early_stop_used = False
+        self.source_guard_used = False
+        for c in code_ctx or []:                                   # sources the automatic code context already points at
+            executor._note_sources(c.get("result") if isinstance(c, dict) else None)
         catalog = executor.registry.catalog_text(executor.region)
         self.case_prompt = build_case_prompt(incident, matches, code_ctx, catalog, mode=executor.mode,
                                              region=executor.region, budget=self.budget, resolved=resolved_text,
-                                             baseline=baseline_text, card_section=card_text)
+                                             baseline=baseline_text, card_section=card_text, extra=extra_text)
 
     # ------------------------------------------------------------ prompts
     def _messages(self, tail: Optional[str] = None) -> List[Dict[str, str]]:
@@ -90,7 +93,15 @@ class Investigation:
                 shallow = act["action"] == "final_report" and self._status_shallow()
                 if act["action"] == "final_report" and self._premature(act, n):
                     self.early_stop_used = True                    # once per run
-                    self._log_step(n, act, self._early_stop_text(shallow), False)
+                    text = self._early_stop_text(shallow)
+                    if self._source_unread(act, n):                # one refusal carries both hints (a second refusal would waste a step)
+                        self.source_guard_used = True
+                        text += "\n\n" + self._source_guard_text()
+                    self._log_step(n, act, text, False)
+                    continue
+                if act["action"] == "final_report" and self._source_unread(act, n):
+                    self.source_guard_used = True                  # once per run
+                    self._log_step(n, act, self._source_guard_text(), False)
                     continue
                 if act["action"] == "final_report":
                     report = actions.split_report(act)
@@ -128,6 +139,29 @@ class Investigation:
         except (TypeError, ValueError):
             conf = 0.0
         return axes.normalize(dict(act)).get("classification") == "unknown" or conf < 0.4
+
+    UNDECIDED_RE = re.compile(r"belirlen(?:e)?(?:mi|em)|tespit edilem|kod mu|konfig\w* mu|code or config|cannot (?:tell|determine|decide)|"
+                              r"unclear whether|not possible to (?:tell|determine)|ayırt edilem|ayirt edilem|netleştirilem|netlestirilem", re.I)
+
+    def _source_unread(self, act: dict, n: int) -> bool:
+        """The LLM gives up ("unknown" / "cannot tell code from configuration") although the case file or an inspection named a stored
+        procedure / screen whose source was never read.  Refused once per run (round 2)."""
+        if self.source_guard_used or n >= self.budget.max_steps:
+            return False
+        if self.executor.sources_read > 0 or not self.executor.known_sources:
+            return False
+        rep = axes.normalize(dict(act))
+        text = " ".join(str(act.get(k) or "") for k in ("summary", "root_cause"))
+        return rep.get("root_cause_type") == "unknown" or bool(self.UNDECIDED_RE.search(text))
+
+    def _source_guard_text(self) -> str:
+        srcs = [s.replace("\\", "/") for s in self.executor.known_sources][:4]
+        return ("SOURCE NOT READ (refused once): your final_report is 'unknown' / cannot tell code from configuration, but the stored procedure or "
+                "screen behind the symptom is known and its source was never opened. Before concluding use read_source on the relevant part "
+                "(sources named so far: %s; give start_line/end_line around the calculation / the permission condition, <= 120 lines) and read the "
+                "COLUMN PROVENANCE / UI GATING sections of the case file: they name the computing procedure and its input tables. Then query the "
+                "inputs (e.g. the template that reads them) and decide on the evidence. A calculation that sums rows which do not exist is not a code "
+                "defect: ask why the rows do not exist." % "; ".join(srcs))
 
     def _status_shallow(self) -> bool:
         """Ticket talks about a status / cancel / error, a work order is known, but no query looked at status history or
