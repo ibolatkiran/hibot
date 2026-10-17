@@ -76,5 +76,10 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
     - HiBot HTTP servisi (`hibot/service`)
     - DbChangeTracking API modülü (`feature/hibot-module`, commit yok)
     - DbChangeTracking UI sayfaları (`feature/hibot-module`, commit yok)
+    - Dört agent da Claude oturum limitine takıldı (15:50'de sıfırlandı); SendMessage ile kaldıkları yerden devam ettirildi.
+40. **HiBot HTTP servisi tamamlandı** (`10c7a44`): 14 test; canlı duman testi SM-2169006 ~23 sn, master_data / 0,78. `.env`'e `HIBOT_SERVICE_KEY` gerekiyor.
+41. **DbChangeTracking API modülü tamamlandı** (`feature/hibot-module`, commit yok).
+    - Domain, EF yapılandırması, migration `AddHiBotAnalyses` (uygulanmadı), typed client, servis, Hangfire poll job'ı, `api/hibot` controller'ı, audit, `TASK_23_HIBOT_MODULE.md`.
+    - Koordinatör denetimi: dal doğru; kullanıcının iki dosyası dokunulmamış; 124/124 test (`DOTNET_ROLL_FORWARD=Major`, makinede sadece .NET 10 runtime var); servis anahtarı loglanmıyor; tüm uçlarda kullanıcı kimliği kontrol ediliyor.
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.
