@@ -103,3 +103,18 @@ class EnvFileTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ArGptChatTests(unittest.TestCase):
+    def test_chat_body_roles_and_url(self):
+        rec = Recorder(body={"content": "ok", "message": "success"})
+        c = HttpChatClient(URL, fmt="argpt_chat", api_key="SECRET-KEY", client_id="SECRET-CID", opener=rec, retries=0)
+        self.assertTrue(c.url.endswith("/api/public/chat-completion"))
+        self.assertEqual(c.complete(MESSAGES, max_tokens=50), "ok")
+        body = json.loads(rec.requests[0].data.decode("utf-8"))
+        self.assertEqual(set(body), {"messages", "completionSettings"})
+        self.assertEqual([m["role"] for m in body["messages"]], ["system", "user"])
+        self.assertEqual(body["completionSettings"]["maxTokens"], 50)
+        headers = {k.lower(): v for k, v in rec.requests[0].header_items()}
+        self.assertEqual(headers["clientid"], "SECRET-CID")
+        self.assertEqual(rec.requests[0].full_url, c.url)

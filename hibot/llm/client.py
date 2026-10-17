@@ -8,7 +8,8 @@ Environment (HttpChatClient.from_env / client_from_env("http")):
     HIBOT_LLM_URL          full endpoint URL                       (required)
     HIBOT_LLM_API_KEY      credential, never logged / put in errors (optional)
     HIBOT_LLM_MODEL        model / deployment name                 (optional, sent when set)
-    HIBOT_LLM_FORMAT       openai | anthropic | raw | argpt        (default openai; company endpoint = argpt)
+    HIBOT_LLM_FORMAT       openai | anthropic | raw | argpt | argpt_chat   (default openai; company endpoint = argpt / argpt_chat;
+                           argpt_chat derives .../chat-completion from a .../text-completion URL)
     HIBOT_LLM_CLIENT_ID    ArGPT ClientId header (argpt only; secret, never logged)
     HIBOT_LLM_AUTH_HEADER  header name for the key                 (default: Authorization / x-api-key)
     HIBOT_LLM_AUTH_SCHEME  prefix put before the key               (default: "Bearer " for openai/raw, "" for anthropic)
@@ -164,6 +165,20 @@ def _flatten_argpt(messages, model, max_tokens, temperature, json_schema, env):
     }
 
 
+def _flatten_argpt_chat(messages, model, max_tokens, temperature, json_schema, env):
+    """ArGPT chat-completion (discovered 2026-10-17): real chat roles, same auth and response shape as text-completion.
+
+    POST https://argptapi.arcelik.com/api/public/chat-completion
+    body: {"messages": [{"role","content"}...], "completionSettings": {...}}. A `tools` field is accepted but IGNORED
+    (no native function calling); `response_format` returns HTTP 500, so JSON-only output is still prompt-enforced.
+    """
+    return {
+        "messages": [{"role": m["role"], "content": m["content"]} for m in messages],
+        "completionSettings": {"maxTokens": max_tokens, "temperature": temperature, "topP": 1,
+                               "presencePenalty": 0, "frequencyPenalty": 0},
+    }
+
+
 _TEXT_KEYS = ("content", "completion", "text", "result", "response", "output", "answer", "data", "choices", "value")
 
 
@@ -214,7 +229,10 @@ _FORMATS = {
     "anthropic": (_flatten_anthropic, _parse_anthropic, "x-api-key", ""),
     "raw": (_flatten_raw, _parse_raw, "Authorization", "Bearer "),
     "argpt": (_flatten_argpt, _parse_argpt, "ApiKey", ""),
+    "argpt_chat": (_flatten_argpt_chat, _parse_argpt, "ApiKey", ""),
 }
+
+_ARGPT_FORMATS = ("argpt", "argpt_chat")
 
 Opener = Callable[[urllib.request.Request, float], Tuple[int, bytes]]
 
@@ -251,7 +269,10 @@ class HttpChatClient(LLMClient):
         if fmt == "anthropic":
             self._extra.setdefault("anthropic-version", "2023-06-01")
         self._client_id = client_id or None
-        if fmt == "argpt":
+        if fmt == "argpt_chat" and self.url.endswith("/text-completion"):
+            # same .env works for both modes: the chat endpoint sits next to the text-completion one
+            self.url = self.url[: -len("text-completion")] + "chat-completion"
+        if fmt in _ARGPT_FORMATS:
             if not (self._client_id and self._key):
                 raise LLMError("argpt format needs HIBOT_LLM_CLIENT_ID and HIBOT_LLM_API_KEY")
             self._extra["ClientId"] = self._client_id

@@ -25,9 +25,22 @@ Yeni karar en alta eklenir. Format: tarih · karar · gerekçe · kim karar verd
 | D19 | 2026-10-17 | **Değerlendirme disiplini:** iyileştirme dev seti ve set dışı ticket'larla yapılır; test seti tur başına bir kez çalıştırılır. Etiket değişiklikleri ancak önceden yazılmış mekanik kurallarla yapılır. | Aşırı uyumla sahte iyileşmenin önlenmesi. | Koordinatör |
 | D20 | 2026-10-17 | **Beyin: ArGPT (GPT-4o) zorunlu.** Mimari, beyinden bağımsız **3 katman** olarak kurulur: (1) **araç katmanı** `hibot/tools` + MCP sunucusu (`code_search`, `read_file`, `sql`, `graph`, `column_writers`, `similar_tickets`, `cards`, `ticket_window`, `git_log/blame`); (2) **yöntem kitaplığı** `knowledge/skills/*.md` (koordinatörün araştırma yöntemleri; her elle çözülen vakadan sonra güncellenir); (3) beyin: HiBot'un ArGPT döngüsü (tool calling taklidi, plan / öz eleştiri adımları) ve zor vakalarda **developer + Claude Code** (aynı MCP araçlarıyla). Her yeni vaka için ayrı bir Python modülü yazılmaz; araç ve skill eklenir. | Kullanıcı: "senin kadar yetenekli bir agent istiyorum", "ArGPT kullanmamız gerekiyor". Koordinatörün HiBot'tan farkı: grep, serbest okuma ve SQL, sınırsız adım, araştırma yöntemi. GPT-4o ve text-completion gateway'i daha zayıf → ağır işi deterministik araçlar, yönü skill'ler taşır. | Kullanıcı (kısıt) + Koordinatör (mimari) |
 | D21 | 2026-10-17 | **Vektör DB önceliği düşük.** Kod ve şemada tam isimler net; tam eşleşme, graf ve SQL daha isabetli. Embedding sadece (a) çok dilli benzer ticket araması ve (b) kavramla kod bulma için, ayrı bir sunucu olmadan **yerel indeksle** (sqlite/FAISS) eklenir. ArGPT'de embedding yok → yerel çok dilli bir model gerekir. | Koordinatörün başarılı teşhislerinde vektör arama rol oynamadı. | Koordinatör |
+| D22 | 2026-10-17 | **ArGPT keşfi (prob, 2026-10-17):** Model **GPT-5.1 (PTU)** (kullanıcı). Bulgular:
+- `POST /api/public/chat-completion` **var**: `{"messages":[{role,content}], "completionSettings":{...}}`; yanıt `{"content","message"}`. Gerçek chat rolleri ve çok turlu konuşma geçmişi destekleniyor.
+- `tools`, `tool_choice`, `functions` alanları **sessizce yok sayılıyor**; gateway'de native function calling yok.
+- `response_format` (JSON modu) **500** veriyor.
+- `POST /api/public/embeddings` **var** ama denenen gövde şekilleri (input, inputs, text, texts, prompt) 500 verdi; format IT'den öğrenilecek.
+- Swagger 401.
+
+Karar: adaptöre `argpt_chat` formatı eklendi (aynı `.env` ile çalışır, URL otomatik türetilir). **Varsayılan, tur 2 ölçümü bitene kadar `argpt` (text-completion) olarak kalıyor**, karşılaştırmalar bozulmasın diye. Sonra `argpt_chat`'e geçilip ölçülecek. Araç çağrıları JSON taklidiyle devam ediyor (D8). | Prob sonuçları. | Koordinatör |
 
 ## Açık sorular
-- ArGPT: model GPT-4o (kullanıcı, 2026-10-17). **IT'ye sorulacak:** chat-completions + function calling endpoint'i var mı? Daha yeni modeller (GPT-4.1, o-serisi) var mı? Bağlam ve maxTokens limitleri, oran limitleri.
+- ArGPT: model GPT-5.1 PTU (kullanıcı, 2026-10-17; önce GPT-4o denmişti). **IT'ye sorulacak:**
+  - `chat-completion`'da tools / function calling (Azure OpenAI'de var) açılabilir mi?
+  - `embeddings` gövde formatı ve model adı
+  - JSON modu
+  - GPT-5.1 reasoning effort parametresi
+  - bağlam, maxTokens ve oran limitleri
 - Prod DB: EU kullanıcısı hazır (2026-10-16); kimlik doğrulama tipi (SQL login mi, Entra ID mi?) ve APAC kullanıcısı bekleniyor.
 - Ülke → TenantId eşlemesi: `Catalog.Tenant` verisi DB erişimiyle doğrulanacak.
 - T70 2271 → 2260 (*Financed* → *Work in progress*) de bilinçli mi? (D17 sadece → 2257 için verildi.) T68 329 → 314, T80 706 → 707, T81 897 → 888 için iş birimi kararı bekleniyor. T49 818 → 821 ve T46 841 → 1892 için red önerildi, kullanıcı onayı bekleniyor.
