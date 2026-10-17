@@ -91,6 +91,8 @@ Kapsam sınırları: ticket'ların ~%34'ü Sirius dışı (Manusoft, Contact, Sa
 - ✅ Yöntem kitaplığı `knowledge/skills/` (koordinatör yazdı, `07d22cf`)
 - ✅ Araç katmanı + MCP sunucusu `hibot/tools`, `hibot/mcp_server.py`: 18 araç, stdlib MCP, 443 test. `rg` kurulu değil, Python taramasıyla çalışıyor (ilk arama ~10 sn). İsteğe bağlı: `winget install BurntSushi.ripgrep.MSVC`.
 - 🔄 Tur 2 (Sonnet): yardımcıları araç olarak kullanılacak (ekran yetki koşulu, kolon kökeni, yeni şablonlar)
+- ✅ Claude deneyi (FINDINGS §20–21): zor vakalarda koordinatör seviyesi; rutin 5 ticket'ta ArGPT'den iyi değil (eksen tanımı ve kart benimseme talimatı eksikti). Kredi nedeniyle durduruldu.
+- ⬜ **Birleşik döngü (öncelik):** deterministik ön adımlar (wo_locate, temel sorgu setleri, kart eşleşmesi, ticket penceresi, ekran yetki koşulu, kolon kökeni) → sonuçlar case file'a → beyin (ArGPT `argpt_chat`; isteğe bağlı Claude) genel araçlar + skill'lerle devam eder → eksen kuralları ve kart benimseme kuralı prompt'ta. Claude prompt'una da eksen tanımları eklenecek.
 - ⬜ ArGPT döngüsünü yenile: genel araçlar (`tool_catalog`), semptoma göre skill seçimi ve prompt'a enjeksiyonu, zorunlu plan → araştır → çürüt → raporla adımları, daha geniş adım bütçesi. **Tur 2 ve araç katmanı bittikten sonra.**
 - ⬜ Karşılaştırma: eski ve yeni döngü (dev + test), ayrıca SM-2172385 / SM-2169006'da Claude Code headless (Sonnet) + MCP denemesi
 - ⬜ Developer'lar için Claude Code + HiBot MCP kurulum rehberi (zor vakalar)

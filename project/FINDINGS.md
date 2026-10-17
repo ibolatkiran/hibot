@@ -660,6 +660,29 @@ Karşılaştırma: `knowledge/eval/compare_round1_vs_round2.md`.
 
 **Sonuç:** Beyin (native tool calling + güçlü model) belirleyici. Aynı araçlar ve skill'lerle Haiku 5.5, ArGPT JSON döngüsünün tur 2 sonucunu geçti ve koordinatör seviyesine ulaştı; maliyeti ticket başına ~1–2 cent. ArGPT zorunluluğu (D20) sürüyor. → Seçenekler: (a) kurum içinde Claude erişimi (Bedrock / Foundry / kurumsal API) için onay alınması, (b) ArGPT `chat-completion` + GPT-5.1 ile aynı mimariyi kurup karşılaştırma. Ölçüm: 40 ticket'lık test setiyle (~$0,5).
 
+## 21. Claude Haiku 5.5: test alt kümesinde 5 ticket (kullanıcı kredi nedeniyle durdurdu), 2026-10-17
+
+`tools/eval/run_eval_claude.py`, tag `claude_haiku_20`. 20 ticket planlanmıştı, kullanıcı 5 ticket sonra durdurdu ("çok kredi harcıyor"). Harcama $0,058; deneylerin toplamı ~$0,08.
+
+**Aynı 5 ticket'ta karşılaştırma**
+
+| | Claude Haiku | ArGPT tur 2 | ArGPT tur 1 | Baseline |
+|---|---|---|---|---|
+| Kök neden türü doğru | 2/5 | 3/5 | 3/5 | 3/5 |
+| Emin ama yanlış | 2/5 | 1/5 | 1/5 | 3/5 |
+| Ortalama süre / LLM çağrısı | 75 sn / 9,6 | 26 sn / 2,2 | 26 sn / 3,0 | 26 sn / 2,6 |
+
+**Analiz**
+- **SM-2070070 (Egypt 2271 → 2257, D17):** Claude `cards_match`'i çağırdı, StatusStep'i kontrol etti, elle zorlamayı buldu ve özete "bilinçli bir kısıt gibi görünüyor" yazdı. Yine de `config` etiketini seçti. ArGPT ise onaylı kartı deterministik olarak uyguladı (`user_error`).
+  → Claude prompt'unda **eksen tanımları ve "onaylı kart + destekleyen doğrulama → kartın sınıfını benimse" kuralı eksik.** Model hatası değil, talimat eksiği.
+- **SM-2010200 / SM-2001523:** etiketler zayıf (pencerede değişiklik yok ⇒ beklenen `unknown`; bildirim ⇒ `config`). Bu ticket'larda tüm beyinler yanıldı.
+- n=5 çok küçük; 1 ticket fark = %20.
+
+**Sonuç**
+- Zor ve açık uçlu vakalarda (FINDINGS §20) Claude açıkça daha iyi.
+- Gümüş etiketli rutin vakalarda üstünlük **gösterilemedi**. Deterministik bilgi enjeksiyonu (kartlar, eksen kuralları) burada belirleyici.
+- **Doğru mimari:** güçlü beyin + deterministik ön adımlar (wo_locate, temel sorgu setleri, kart eşleşmesi, ticket penceresi) + açık sınıflandırma kuralları. İkisinin birleşimi.
+
 ## 6. Kod ile API arasındaki uyumsuzluklar (potansiyel canlı hatalar)
 
 Önyüzün çağırdığı ama backend'de karşılığı olmayan **109 benzersiz çağrı** var, liste: `knowledge/codemap/trace_index.json` → `unmatched_frontend_calls`. Örnekler:
