@@ -93,5 +93,11 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
     - Kullanıcı onayıyla önce bekleyen migration'lar listelendi (sadece `AddHiBotAnalyses` bekliyordu), sonra **sadece o migration uygulandı**. Ortam `Development` olarak zorlandı, bağlantı dizesi sadece süreç ortamında verildi.
     - HiBot servisi `127.0.0.1:8077`'de çalışıyor (health 200).
     - **Risk tespiti:** yerel API'nin Hangfire sunucusu paylaşılan preprod deposunda preprod'un job'larını (monitor, bildirim) işler; açılıştaki zamanlama senkronu preprod'un zamanlanmış job'larını ekleyip silebilir. → API agent'ına güvenli yerel çalıştırma ayarları verildi: `hibot` kuyruğu, `Hangfire:ServerQueues`, `Monitoring:Scheduling:SyncOnStartup`, bootstrap anahtarı. API bu ayarlar olmadan başlatılmadı.
+44. **Uçtan uca demo çalıştı.** API güvenli ayarlarla başladı (Hangfire sadece `hibot` kuyruğunu dinliyor, zamanlama senkronu atlandı; logdan doğrulandı). UI `localhost:3000`'de.
+    - Kullanıcı UI'dan analizler yaptı ve **4 geri bildirim** verdi: 3 doğru → **3 onaylı kart** (IKEA seri no SM-1838458, Pakistan T75 indirim onayı → WIP SM-2173964, adhoc rapor SM-1866449), 1 yanlış (SM-1836899).
+    - Öğrenme döngüsü UI üzerinden çalışıyor. Hata: geri bildirimden oluşan kartlarda eksenler boş, kart testi başarısız.
+45. SM-1808060 (FINDINGS §22): v1 kanıt toplamadan rapor yazdı → asgari kanıt koruması gerekli; skill güncellendi.
+46. v2 agent'ı 12:59'dan beri takılıydı. ArGPT `chat-completion` 429 "Daily usage limit" döndürüyor, `text-completion` çalışıyor. Agent'ın bekleme script'leri durduruldu, agent'ın kendisi de durduruldu.
+    - **Yeni Sonnet agent** başlatıldı: kart eksenlerini düzeltme, asgari kanıt koruması (v1+v2), chat→text otomatik geçişi, dev kontrolleri (SM-1808060/2172385/2169006), son test ölçümü `v2_20261017`.
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.
