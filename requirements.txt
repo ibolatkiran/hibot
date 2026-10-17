@@ -1,3 +1,7 @@
 pyodbc>=5.0
 # The MCP server (hibot/mcp_server.py) is stdlib only; no extra package is needed.
 # Optional for faster code_search: install ripgrep (rg) and put it on PATH.
+# Optional "service" extra: HTTP service (python -m hibot.service). Not needed for the CLI/MCP.
+# fastapi>=0.110
+# uvicorn>=0.29
+# httpx>=0.27   (tests only: FastAPI TestClient)
