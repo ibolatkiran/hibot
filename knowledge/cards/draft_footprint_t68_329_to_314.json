@@ -57,8 +57,8 @@
     "If the app refuses for another reason, investigate why the application flow fails (see wo_status_transition_check)."
   ],
   "code_locations": [],
-  "confidence": 0.4,
-  "status": "draft",
+  "confidence": 0.85,
+  "status": "confirmed",
   "evidence_tickets": [
     "SM-2139009",
     "SM-2139002",
@@ -90,6 +90,20 @@
       "event": "axes_added",
       "run_id": null,
       "note": "migration: root_cause_type=config, resolution_action=data_fix"
+    },
+    {
+      "ts": "2026-10-17T09:53:50+00:00",
+      "event": "confirmed",
+      "who": "user",
+      "run_id": null,
+      "note": "Kullanıcı 2026-10-17: kart kararları 'hepsi ok' (D23): geçiş tanımı eksik, developer'lar DB'den zorlamış (taslak onaylandı)",
+      "overrides": {
+        "classification": {
+          "old": null,
+          "new": "config"
+        }
+      },
+      "status_before": "draft"
     }
   ],
   "state_signature": {
@@ -105,5 +119,6 @@
     "transition_configured": false
   },
   "root_cause_type": "config",
-  "resolution_action": "data_fix"
+  "resolution_action": "data_fix",
+  "classification": "config"
 }

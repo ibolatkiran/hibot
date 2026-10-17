@@ -33,6 +33,14 @@ Yeni karar en alta eklenir. Format: tarih · karar · gerekçe · kim karar verd
 - Swagger 401.
 
 Karar: adaptöre `argpt_chat` formatı eklendi (aynı `.env` ile çalışır, URL otomatik türetilir). **Varsayılan, tur 2 ölçümü bitene kadar `argpt` (text-completion) olarak kalıyor**, karşılaştırmalar bozulmasın diye. Sonra `argpt_chat`'e geçilip ölçülecek. Araç çağrıları JSON taklidiyle devam ediyor (D8). | Prob sonuçları. | Koordinatör |
+| D23 | 2026-10-17 | **Kart kararları** (kullanıcı: "hepsi ok"):
+- T70 2271 → 2260 **bilinçli kısıt** (`user_error` / `explain_to_user`, D17 ile aynı ilke).
+- T68 329 → 314, T80 706 → 707 ve T81 897 → 888 taslaktaki haliyle **onaylandı**: geçiş tanımı eksik, developer'lar DB'den zorlamış (`config` / `data_fix`).
+- T49 818 → 821 ve T46 841 → 1892 **gürültü olarak reddedildi**.
+
+Koordinatörün yorumudur; `hibot cards` ile geri alınabilir. | Kullanıcı | Kullanıcı |
+| D24 | 2026-10-17 | **Teslim kanalı:** HiBot, **DbChangeTrackingSystemAPI + DbChangeTrackingSystemUI** içinde yeni bir modül olarak sunulacak (analiz isteği, rapor görüntüleme, tek tık geri bildirim, geçmiş analizler, kartlar). | Kullanıcı | Kullanıcı |
+| D25 | 2026-10-17 | IT soruları (function calling, embeddings formatı, kurumsal Claude erişimi): kullanıcıya göre **hepsi mümkün**; ayrıntılar hafta sonundan sonra gelecek. | Kullanıcı | Kullanıcı |
 
 ## Açık sorular
 - ArGPT: model GPT-5.1 PTU (kullanıcı, 2026-10-17; önce GPT-4o denmişti). **IT'ye sorulacak:**

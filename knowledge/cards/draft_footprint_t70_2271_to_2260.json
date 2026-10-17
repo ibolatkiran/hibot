@@ -1,110 +1,163 @@
 {
-  "id": "draft_footprint_t70_2271_to_2260",
-  "title": "Tenant 70 Egypt: status 2271 -> 2260 not configured; developers force it manually",
-  "symptom_signature": {
-    "problem_type": "data_correction",
-    "app": "portal",
-    "keywords": [
-      "open"
-    ],
-    "entity_requirements": [
-      "work_order_ids"
-    ]
+ "id": "draft_footprint_t70_2271_to_2260",
+ "title": "Egypt (T70): Financed(Accounted) → Work in progress talebi — bilinçli kısıt",
+ "symptom_signature": {
+  "problem_type": "data_correction",
+  "app": "portal",
+  "keywords": [
+   "open"
+  ],
+  "entity_requirements": [
+   "work_order_ids"
+  ]
+ },
+ "root_cause": "Tenant 70'te 2271 Financed(Accounted) → 2260 Work in progress geçişi Catalog.StatusStep'te bilinçli olarak kapalıdır (iş birimi kararı; D17 ile aynı ilke). Kullanıcılar finanse edilmiş iş emrini tekrar işleme almak için ticket açıyor; geçmişte developer'lar statüyü doğrudan DB'den zorlamış.",
+ "verification_queries": [
+  {
+   "query_id": "wo_locate",
+   "params_from_entities": {
+    "Number": "entities.work_order_ids[0]"
+   }
   },
-  "root_cause": "Tenant 70 Egypt: status 2271 (Financed(Accounted)) -> 2260 (Work in progress) is NOT configured in Catalog.StatusStep, so the application refuses it; in 2 resolved tickets (2026-06-15 .. 2026-06-29) the work order status was nevertheless changed in Log.WorkOrderJsonLog without an Operation.WorkOrderGpsInfo history row, i.e. most likely forced directly in the database by a developer.",
-  "verification_queries": [
-    {
-      "query_id": "wo_locate",
-      "params_from_entities": {
-        "Number": "entities.work_order_ids[0]"
-      }
+  {
+   "query_id": "wo_status_timeline",
+   "params_from_entities": {
+    "TenantId": {
+     "const": 70
     },
-    {
-      "query_id": "wo_status_timeline",
-      "params_from_entities": {
-        "TenantId": {
-          "const": 70
-        },
-        "WorkOrderId": "entities.work_order_ids[0]"
-      }
-    },
-    {
-      "query_id": "wo_field_changes",
-      "params_from_entities": {
-        "TenantId": {
-          "const": 70
-        },
-        "WorkOrderId": "entities.work_order_ids[0]"
-      }
-    },
-    {
-      "query_id": "status_step_check",
-      "params_from_entities": {
-        "TenantId": {
-          "const": 70
-        },
-        "FromStatusId": {
-          "const": 2271
-        },
-        "ToStatusId": {
-          "const": 2260
-        }
-      }
-    }
-  ],
-  "fix_steps": [
-    "Confirm in status_step_check that 2271 -> 2260 is missing for the tenant (IsRequestedTarget = 0).",
-    "Decide with the business whether the transition should be allowed; if yes add the Catalog.StatusStep row (config change), if it is a deliberate restriction explain it to the requester instead of forcing the status.",
-    "Check wo_field_changes: a status change without a history row and with UpdateUserId unchanged confirms the manual fix.",
-    "If the app refuses for another reason, investigate why the application flow fails (see wo_status_transition_check)."
-  ],
-  "code_locations": [],
-  "confidence": 0.3,
-  "status": "draft",
-  "evidence_tickets": [
-    "SM-2050977",
-    "SM-2033489"
-  ],
-  "created_by": "batch_footprint",
-  "created_at": "2026-10-16T20:03:48+00:00",
-  "history": [
-    {
-      "ts": "2026-10-16T20:03:48+00:00",
-      "event": "created",
-      "run_id": null,
-      "note": "batch_footprint: 2 tickets, 2 with UpdateUserId unchanged; heuristic, NOT confirmed"
-    },
-    {
-      "ts": "2026-10-16T20:04:15+00:00",
-      "event": "evidence_added",
-      "run_id": null,
-      "note": "batch_footprint: 2 tickets, 2 with UpdateUserId unchanged; heuristic, NOT confirmed"
-    },
-    {
-      "ts": "2026-10-16T20:11:47+00:00",
-      "event": "state_signature_added",
-      "run_id": null,
-      "note": "migration: tenant/from/to taken from status_step_check constants"
-    },
-    {
-      "ts": "2026-10-16T20:44:31+00:00",
-      "event": "axes_added",
-      "run_id": null,
-      "note": "migration: root_cause_type=config, resolution_action=data_fix"
-    }
-  ],
-  "state_signature": {
-    "tenant_id": 70,
-    "from_status_id": 2271,
-    "to_status_id": 2260,
-    "from_status_name": "Financed(Accounted)",
-    "to_status_name": "Work in progress",
-    "target_words": [
-      "work in progress",
-      "progre"
-    ],
-    "transition_configured": false
+    "WorkOrderId": "entities.work_order_ids[0]"
+   }
   },
-  "root_cause_type": "config",
-  "resolution_action": "data_fix"
+  {
+   "query_id": "wo_field_changes",
+   "params_from_entities": {
+    "TenantId": {
+     "const": 70
+    },
+    "WorkOrderId": "entities.work_order_ids[0]"
+   }
+  },
+  {
+   "query_id": "status_step_check",
+   "params_from_entities": {
+    "TenantId": {
+     "const": 70
+    },
+    "FromStatusId": {
+     "const": 2271
+    },
+    "ToStatusId": {
+     "const": 2260
+    }
+   }
+  }
+ ],
+ "fix_steps": [
+  "Statüyü DB'den zorlama — bu geçiş bilinçli olarak kapalı.",
+  "Talep edene kısıtın bilinçli olduğunu açıkla; gerçekten gerekiyorsa iş birimi onayına yönlendir.",
+  "Elle zorlama yapılmışsa (wo_field_changes'te geçmiş satırsız 2271→2260) süreç ihlali olarak raporla."
+ ],
+ "code_locations": [],
+ "confidence": 0.85,
+ "status": "confirmed",
+ "evidence_tickets": [
+  "SM-2050977",
+  "SM-2033489"
+ ],
+ "created_by": "batch_footprint",
+ "created_at": "2026-10-16T20:03:48+00:00",
+ "history": [
+  {
+   "ts": "2026-10-16T20:03:48+00:00",
+   "event": "created",
+   "run_id": null,
+   "note": "batch_footprint: 2 tickets, 2 with UpdateUserId unchanged; heuristic, NOT confirmed"
+  },
+  {
+   "ts": "2026-10-16T20:04:15+00:00",
+   "event": "evidence_added",
+   "run_id": null,
+   "note": "batch_footprint: 2 tickets, 2 with UpdateUserId unchanged; heuristic, NOT confirmed"
+  },
+  {
+   "ts": "2026-10-16T20:11:47+00:00",
+   "event": "state_signature_added",
+   "run_id": null,
+   "note": "migration: tenant/from/to taken from status_step_check constants"
+  },
+  {
+   "ts": "2026-10-16T20:44:31+00:00",
+   "event": "axes_added",
+   "run_id": null,
+   "note": "migration: root_cause_type=config, resolution_action=data_fix"
+  },
+  {
+   "ts": "2026-10-17T09:53:50+00:00",
+   "event": "confirmed",
+   "who": "user",
+   "run_id": null,
+   "note": "Kullanıcı 2026-10-17: kart kararları 'hepsi ok' (D23): bilinçli kısıt",
+   "overrides": {
+    "title": {
+     "old": "Tenant 70 Egypt: status 2271 -> 2260 not configured; developers force it manually",
+     "new": "Egypt (T70): Financed(Accounted) → Work in progress talebi — bilinçli kısıt"
+    },
+    "root_cause": {
+     "old": "Tenant 70 Egypt: status 2271 (Financed(Accounted)) -> 2260 (Work in progress) is NOT configured in Catalog.StatusStep, so the application refuses it; in 2 resolved tickets (2026-06-15 .. 2026-06-29) the work order status was nevertheless changed in Log.WorkOrderJsonLog without an Operation.WorkOrderGpsInfo history row, i.e. most likely forced directly in the database by a developer.",
+     "new": "Tenant 70'te 2271 Financed(Accounted) → 2260 Work in progress geçişi Catalog.StatusStep'te bilinçli olarak kapalıdır (iş birimi kararı; D17 ile aynı ilke). Kullanıcılar finanse edilmiş iş emrini tekrar işleme almak için ticket açıyor; geçmişte developer'lar statüyü doğrudan DB'den zorlamış."
+    },
+    "fix_steps": {
+     "old": [
+      "Confirm in status_step_check that 2271 -> 2260 is missing for the tenant (IsRequestedTarget = 0).",
+      "Decide with the business whether the transition should be allowed; if yes add the Catalog.StatusStep row (config change), if it is a deliberate restriction explain it to the requester instead of forcing the status.",
+      "Check wo_field_changes: a status change without a history row and with UpdateUserId unchanged confirms the manual fix.",
+      "If the app refuses for another reason, investigate why the application flow fails (see wo_status_transition_check)."
+     ],
+     "new": [
+      "Statüyü DB'den zorlama — bu geçiş bilinçli olarak kapalı.",
+      "Talep edene kısıtın bilinçli olduğunu açıkla; gerçekten gerekiyorsa iş birimi onayına yönlendir.",
+      "Elle zorlama yapılmışsa (wo_field_changes'te geçmiş satırsız 2271→2260) süreç ihlali olarak raporla."
+     ]
+    },
+    "classification": {
+     "old": null,
+     "new": "user_error"
+    }
+   },
+   "status_before": "draft"
+  },
+  {
+   "at": "2026-10-17T09:54:05+00:00",
+   "who": "user",
+   "action": "annotate",
+   "note": "Eksenler D23 ile uyumlu hale getirildi (bilinçli kısıt)",
+   "changes": {
+    "axes": {
+     "old": [
+      "config",
+      "data_fix"
+     ],
+     "new": [
+      "user_error",
+      "explain_to_user"
+     ]
+    }
+   }
+  }
+ ],
+ "state_signature": {
+  "tenant_id": 70,
+  "from_status_id": 2271,
+  "to_status_id": 2260,
+  "from_status_name": "Financed(Accounted)",
+  "to_status_name": "Work in progress",
+  "target_words": [
+   "work in progress",
+   "progre"
+  ],
+  "transition_configured": false
+ },
+ "root_cause_type": "user_error",
+ "resolution_action": "explain_to_user",
+ "classification": "user_error"
 }

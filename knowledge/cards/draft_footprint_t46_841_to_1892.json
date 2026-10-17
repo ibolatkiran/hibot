@@ -61,7 +61,7 @@
   ],
   "code_locations": [],
   "confidence": 0.2,
-  "status": "draft",
+  "status": "rejected",
   "evidence_tickets": [
     "SM-2140935",
     "SM-2133458",
@@ -93,6 +93,14 @@
       "event": "axes_added",
       "run_id": null,
       "note": "migration: root_cause_type=config, resolution_action=data_fix"
+    },
+    {
+      "ts": "2026-10-17T09:53:51+00:00",
+      "event": "rejected",
+      "who": "user",
+      "run_id": null,
+      "note": "Kullanıcı 2026-10-17: kart kararları 'hepsi ok' (D23): gürültü (job/trigger zinciri), red",
+      "status_before": "draft"
     }
   ],
   "state_signature": {
