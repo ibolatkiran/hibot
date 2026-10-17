@@ -59,5 +59,7 @@ En yeni giriş en üstte. Her iş grubundan sonra güncellenir.
     - ana veri gerilemesi; bildirim ve performans grupları
     - iki yeni ticket dev setine eklenecek
     - Sonunda test seti bir kez çalıştırılacak (D19).
+30. Kullanıcı: "senin kadar yetenekli agent", ArGPT (GPT-4o) zorunlu → D20 / D21. Koordinatör yöntem kitaplığını yazdı (`knowledge/skills`, `07d22cf`).
+31. **Araç katmanı + MCP sunucusu** (Sonnet): 18 araç. Koordinatör denetimi: MCP stdio round-trip çalışıyor, secret arama ve okuma engelli, 443 test geçiyor. Alt agent'ın "bug" dediği şey (unittest altında `.env` yüklenmemesi) bilinçli bir tasarım.
 
 **Kullanıcıdan beklenen:** Jira XML export (19 parça), prod DB read-only erişimi, AI endpoint dokümanı.

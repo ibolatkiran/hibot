@@ -89,7 +89,7 @@ Kapsam sınırları: ticket'ların ~%34'ü Sirius dışı (Manusoft, Contact, Sa
 
 ## Yeni yön (D20, 2026-10-17): araçlar + skill'ler + beyin
 - ✅ Yöntem kitaplığı `knowledge/skills/` (koordinatör yazdı, `07d22cf`)
-- 🔄 Araç katmanı + MCP sunucusu `hibot/tools`, `hibot/mcp_server.py` (Sonnet)
+- ✅ Araç katmanı + MCP sunucusu `hibot/tools`, `hibot/mcp_server.py`: 18 araç, stdlib MCP, 443 test. `rg` kurulu değil, Python taramasıyla çalışıyor (ilk arama ~10 sn). İsteğe bağlı: `winget install BurntSushi.ripgrep.MSVC`.
 - 🔄 Tur 2 (Sonnet): yardımcıları araç olarak kullanılacak (ekran yetki koşulu, kolon kökeni, yeni şablonlar)
 - ⬜ ArGPT döngüsünü yenile: genel araçlar (`tool_catalog`), semptoma göre skill seçimi ve prompt'a enjeksiyonu, zorunlu plan → araştır → çürüt → raporla adımları, daha geniş adım bütçesi. **Tur 2 ve araç katmanı bittikten sonra.**
 - ⬜ Karşılaştırma: eski ve yeni döngü (dev + test), ayrıca SM-2172385 / SM-2169006'da Claude Code headless (Sonnet) + MCP denemesi

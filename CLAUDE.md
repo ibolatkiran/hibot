@@ -27,6 +27,7 @@ Sirius (Arçelik/Beko saha servis platformu) incident'lerini analiz eden bir age
 | `tools/graph/` | codemap + şema → birleşik bilgi grafı üreteci |
 | `hibot/db/` | güvenli read-only SQL: validator, maskeleme, şablonlar, runner |
 | `hibot/knowledge/` | `CodeGraph`: ekran↔endpoint↔SP↔tablo↔trigger izleme, hata metni ve serbest metin araması |
+| `hibot/tools/` + `hibot/mcp_server.py` | **araç katmanı** (D20): `code_search`, `read_file`, `sql`, `run_template`, `graph_*`, `column_writers`, `similar_tickets`, `ticket`, `cards_*`, `ticket_window`, `git_log/blame`. `python -m hibot.mcp_server` = MCP stdio sunucusu (Claude Code kaydı: `docs/mcp/README.md`). |
 | `hibot/llm/` | LLM istemcisi (FakeLLM + HTTP; `HIBOT_LLM_URL/_API_KEY/_MODEL/_FORMAT`), JSON çıkarma, doğrulama ve onarım |
 | `hibot/agent/` | orkestratör: intake → benzer vakalar → kartlar → kod bağlamı → soruşturma döngüsü → rapor → geri bildirim |
 | `hibot/prompts/` | sistem ve aksiyon prompt'ları |
