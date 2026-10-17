@@ -46,5 +46,5 @@ SM-2103087 and SM-2139680 are marked CW by the legacy label (data_correction vs 
 - Dev results (`results_r3_dev_v2.md`: rct 5/5, both axes 5/5) did not transfer to holdout2 (45% / 42%). Dev is leaky (all dev tickets have worked examples in skills), so dev numbers say nothing about generalisation.
 - Highest-leverage next step stays native tool calling (D25) rather than more JSON-protocol tuning: v2 spent 2.7x the LLM calls and 2.7x the time for lower accuracy.
 
-## Open
-- Identify the 4 v2 error tickets: `runs/eval_holdout2_v2/results.jsonl` (records with a non-null `error`, plus `llm_transport` / `warnings`). The per-ticket table shows conf 0.00 for SM-1934122, SM-2080016, SM-1833067 and raw 0.00 for SM-1957195; these are candidates, not confirmed.
+## The 4 v2 errors (confirmed from `runs/eval_holdout2_v2/results.jsonl`, 2026-10-17)
+SM-1957195, SM-1934122, SM-2080016, SM-1833067: all `LLM transport error: LLM request failed after 3 attempts: HTTP 500` (ArGPT gateway, 19:21-19:53). These are gateway outages, not v2 answers; their reports are fallbacks (conf 0.00 / unknown) and count as wrong or unknown in the v2 numbers above. The verdict holds even if all four were correct (53% < 58%, see Verdict). v1 had no such errors, so v2's longer runs (about 7 LLM calls per ticket vs 2.6) were also more exposed to gateway failures.
